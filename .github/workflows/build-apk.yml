@@ -119,12 +119,16 @@ jobs:
       - name: Copy assets into scaffold
         run: |
           mkdir -p /tmp/flutter_app/assets/fonts
+          mkdir -p /tmp/flutter_app/assets/icon
 
           # Copy voters.db
           test -f app/assets/voters.db && \
             cp app/assets/voters.db /tmp/flutter_app/assets/voters.db || \
             echo "voters.db not in repo — placeholder was created in step 5"
           cp -f app/assets/voters.db /tmp/flutter_app/assets/voters.db 2>/dev/null || true
+
+          # Copy app icon
+          cp app/assets/icon/app_icon.png /tmp/flutter_app/assets/icon/app_icon.png
 
           # Copy fonts
           cp app/assets/fonts/NotoSansTelugu-Regular.ttf /tmp/flutter_app/assets/fonts/
@@ -133,14 +137,21 @@ jobs:
           echo "=== Assets ==="
           ls -lh /tmp/flutter_app/assets/
           ls -lh /tmp/flutter_app/assets/fonts/
+          ls -lh /tmp/flutter_app/assets/icon/
           test -f /tmp/flutter_app/assets/voters.db   && echo "✓ voters.db"   || { echo "✗ voters.db MISSING"; exit 1; }
           test -f /tmp/flutter_app/assets/fonts/NotoSansTelugu-Regular.ttf && echo "✓ Regular font" || { echo "✗ Regular font MISSING"; exit 1; }
           test -f /tmp/flutter_app/assets/fonts/NotoSansTelugu-Bold.ttf    && echo "✓ Bold font"    || { echo "✗ Bold font MISSING"; exit 1; }
+          test -f /tmp/flutter_app/assets/icon/app_icon.png && echo "✓ App icon" || { echo "✗ App icon MISSING"; exit 1; }
 
       # ── 8. Flutter dependencies ──────────────────────────────────────────
       - name: Install Flutter dependencies
         working-directory: /tmp/flutter_app
         run: flutter pub get
+
+      # ── 8b. Generate launcher icons ──────────────────────────────────────
+      - name: Generate app launcher icons
+        working-directory: /tmp/flutter_app
+        run: flutter pub run flutter_launcher_icons
 
       # ── 9. Build release APK ─────────────────────────────────────────────
       - name: Build release APK

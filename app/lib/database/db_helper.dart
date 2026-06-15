@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/voter.dart';
+import '../utils/transliterate.dart';
 
 /// Singleton database helper.
 /// On first launch, copies `assets/voters.db` to the app documents directory.
@@ -79,10 +80,18 @@ class DbHelper {
     return rows.map(Voter.fromMap).toList();
   }
 
-  /// Returns voters whose name contains [name] (Telugu partial match).
+  /// Returns voters whose name contains [name].
+  /// Accepts both Telugu input (direct match) and English input
+  /// (auto-transliterated — e.g. "faizullah" finds "ఫైజుల్లా").
   Future<List<Voter>> searchByName(String name) async {
     final db = await database;
-    final pattern = '%${name.trim()}%';
+    final input = name.trim();
+    if (input.isEmpty) return [];
+
+    // Convert English → Telugu if needed
+    final teluguQuery = Transliterator.toTeluguPattern(input);
+    final pattern = '%$teluguQuery%';
+
     final rows = await db.query(
       'voters',
       where: 'voter_name LIKE ?',

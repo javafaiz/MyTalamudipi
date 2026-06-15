@@ -42,14 +42,14 @@ class _SearchScreenState extends State<SearchScreen> {
       };
 
   String get _hintTe => switch (widget.searchType) {
-        SearchType.byName => 'పేరు టైప్ చేయండి (తెలుగు లో)…',
+        SearchType.byName => 'పేరు టైప్ చేయండి (తెలుగు లేదా English)…',
         SearchType.bySerialNo => 'సీరియల్ నంబరు టైప్ చేయండి…',
         SearchType.byVoterId => 'EPIC నంబరు టైప్ చేయండి…',
         SearchType.byHouseNumber => 'ఇంటి నంబరు టైప్ చేయండి…',
       };
 
   String get _hintEn => switch (widget.searchType) {
-        SearchType.byName => 'e.g. రెడ్డి or రామి',
+        SearchType.byName => 'e.g. faizullah  or  రెడ్డి',
         SearchType.bySerialNo => 'e.g. 42',
         SearchType.byVoterId => 'e.g. AP271850405225',
         SearchType.byHouseNumber => 'e.g. 1-5',
