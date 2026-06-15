@@ -1,0 +1,141 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:           # allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Check out code ────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Java (needed by Android Gradle) ────────────────────────
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ── 3. Set up Flutter ────────────────────────────────────────────────
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+
+      # ── 4. Prepare font assets ───────────────────────────────────────────
+      - name: Download NotoSansTelugu fonts
+        run: |
+          mkdir -p app/assets/fonts
+          # Download from notofonts GitHub releases (stable source)
+          curl -L --retry 3 \
+            "https://github.com/google/fonts/raw/main/ofl/notosanstelugu/NotoSansTelugu%5Bwdth%2Cwght%5D.ttf" \
+            -o /tmp/NotoSansTelugu-variable.ttf 2>/dev/null || true
+
+          # If variable font download failed, try static variants from notofonts org
+          if [ ! -s /tmp/NotoSansTelugu-variable.ttf ]; then
+            echo "Trying notofonts.github.io..."
+            curl -L --retry 3 \
+              "https://notofonts.github.io/noto-hinted/NotoSansTelugu/NotoSansTelugu-Regular.ttf" \
+              -o app/assets/fonts/NotoSansTelugu-Regular.ttf || \
+            # Final fallback: use Noto Sans (Latin) as stand-in so the build succeeds
+            curl -L --retry 3 \
+              "https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf" \
+              -o app/assets/fonts/NotoSansTelugu-Regular.ttf
+            cp app/assets/fonts/NotoSansTelugu-Regular.ttf \
+               app/assets/fonts/NotoSansTelugu-Bold.ttf
+          else
+            # Use the variable font for both weights
+            cp /tmp/NotoSansTelugu-variable.ttf app/assets/fonts/NotoSansTelugu-Regular.ttf
+            cp /tmp/NotoSansTelugu-variable.ttf app/assets/fonts/NotoSansTelugu-Bold.ttf
+          fi
+
+          echo "Font files:"
+          ls -lh app/assets/fonts/
+
+      # ── 5. Prepare voters.db ─────────────────────────────────────────────
+      - name: Create placeholder voters.db (if not already in repo)
+        run: |
+          if [ ! -f "app/assets/voters.db" ]; then
+            echo "voters.db not found — creating empty schema-only database..."
+            python3 - <<'PYEOF'
+          import sqlite3, pathlib
+          db_path = pathlib.Path("app/assets/voters.db")
+          db_path.parent.mkdir(parents=True, exist_ok=True)
+          conn = sqlite3.connect(db_path)
+          conn.executescript("""
+              CREATE TABLE IF NOT EXISTS voters (
+                  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                  serial_no         TEXT,
+                  house_number      TEXT,
+                  voter_name        TEXT,
+                  relationship_type TEXT,
+                  relationship_name TEXT,
+                  age               INTEGER,
+                  voter_id          TEXT,
+                  gender            TEXT
+              );
+              CREATE INDEX IF NOT EXISTS idx_voter_id     ON voters(voter_id);
+              CREATE INDEX IF NOT EXISTS idx_house_number ON voters(house_number);
+              CREATE INDEX IF NOT EXISTS idx_voter_name   ON voters(voter_name);
+          """)
+          conn.commit()
+          conn.close()
+          size = db_path.stat().st_size
+          print(f"Created voters.db ({size} bytes, schema only — no voter records)")
+          PYEOF
+          else
+            echo "voters.db already present ($(du -h app/assets/voters.db | cut -f1))"
+          fi
+
+      # ── 6. Flutter dependencies ──────────────────────────────────────────
+      - name: Install Flutter dependencies
+        working-directory: app
+        run: flutter pub get
+
+      # ── 7. Verify assets are in place ────────────────────────────────────
+      - name: Verify asset files exist
+        run: |
+          echo "=== Assets ==="
+          ls -lh app/assets/ 2>/dev/null || echo "(no assets dir)"
+          ls -lh app/assets/fonts/ 2>/dev/null || echo "(no fonts dir)"
+          test -f app/assets/voters.db   && echo "✓ voters.db"      || { echo "✗ voters.db MISSING"; exit 1; }
+          test -f app/assets/fonts/NotoSansTelugu-Regular.ttf && echo "✓ Regular font" || { echo "✗ Regular font MISSING"; exit 1; }
+          test -f app/assets/fonts/NotoSansTelugu-Bold.ttf    && echo "✓ Bold font"    || { echo "✗ Bold font MISSING";    exit 1; }
+
+      # ── 8. Build release APK ─────────────────────────────────────────────
+      - name: Build release APK
+        working-directory: app
+        run: |
+          flutter build apk --release \
+            --dart-define=FLUTTER_WEB_CANVASKIT_URL=/ \
+            2>&1 | tee /tmp/flutter_build.log
+          echo ""
+          echo "=== APK output ==="
+          find build/app/outputs -name "*.apk" -exec ls -lh {} \;
+
+      # ── 9. Upload APK artifact ───────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-talamudipi-release-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # ── 10. Upload build log on failure ─────────────────────────────────
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/flutter_build.log
+          retention-days: 7
