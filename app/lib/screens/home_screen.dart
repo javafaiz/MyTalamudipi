@@ -3,141 +3,96 @@ import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import 'search_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+// ── Village colour palette ────────────────────────────────────────────────────
+class _V {
+  static const forestGreen  = Color(0xFF1B5E20);
+  static const leafGreen    = Color(0xFF2E7D32);
+  static const midGreen     = Color(0xFF388E3C);
+  static const lightGreenBg = Color(0xFFE8F5E9);
+  static const creamBg      = Color(0xFFF1F8E9);
+  static const earthBrown   = Color(0xFF5D4037);
+  static const skyBlue      = Color(0xFF1565C0);
+  static const terracotta   = Color(0xFFBF360C);
+  static const golden       = Color(0xFFF9A825);
+}
+
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F0),
+      backgroundColor: _V.creamBg,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            Expanded(child: _buildSearchOptions(context)),
-            _buildFooter(),
+            _VillageHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _VillageSceneBar(),
+                    _buildSearchSection(context),
+                    _buildDisclaimer(context),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.how_to_vote_rounded, size: 68, color: Colors.white),
-          const SizedBox(height: 12),
-          const Text(
-            'Mana Talamudipi',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'మన తలముడిపి',
-            style: TextStyle(
-              fontSize: 22,
-              color: Colors.white.withOpacity(0.85),
-              fontFamily: 'NotoSansTelugu',
-            ),
-          ),
-          const SizedBox(height: 8),
-          FutureBuilder<int>(
-            future: DbHelper.instance.totalVoters(),
-            builder: (context, snap) {
-              final count = snap.data ?? 0;
-              final label = count > 0
-                  ? 'Total Voters: $count  •  మొత్తం ఓటర్లు: $count'
-                  : 'Voter Information Search • ఓటరు సమాచారం';
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.white70,
-                    fontFamily: 'NotoSansTelugu',
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchOptions(BuildContext context) {
+  Widget _buildSearchSection(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Search by | వెతకండి',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
-              letterSpacing: 0.5,
-            ),
+          Row(
+            children: [
+              const Icon(Icons.travel_explore, size: 15, color: _V.leafGreen),
+              const SizedBox(width: 6),
+              Text(
+                'వెతకండి  |  Search',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[700],
+                  fontFamily: 'NotoSansTelugu',
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _SearchCard(
             icon: Icons.format_list_numbered_rounded,
-            titleTe: 'సీరియల్ నంబరు ద్వారా వెతకండి',
+            villageIcon: Icons.agriculture,
+            titleTe: 'సీరియల్ నంబరు ద్వారా',
             titleEn: 'Search by Serial No.',
-            subtitleTe: 'జాబితాలో సంఖ్య ద్వారా వెతకండి',
-            subtitleEn: 'Find voter by serial number in the list',
-            color: const Color(0xFF1565C0),
+            subtitleEn: 'Find voter by number in the printed list',
+            color: _V.earthBrown,
             onTap: () => _navigate(context, SearchType.bySerialNo),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _SearchCard(
             icon: Icons.badge_rounded,
-            titleTe: 'ఓటర్ ఐడి ద్వారా',
+            villageIcon: Icons.phone_android,
+            titleTe: 'ఓటర్ ఐడి ద్వారా (EPIC)',
             titleEn: 'Search by Voter ID',
-            subtitleTe: 'EPIC నంబరు తో ఒకే రికార్డు',
-            subtitleEn: 'Unique record by EPIC number',
-            color: const Color(0xFF6A1B9A),
+            subtitleEn: 'Enter your EPIC number to find details',
+            color: _V.skyBlue,
             onTap: () => _navigate(context, SearchType.byVoterId),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _SearchCard(
             icon: Icons.home_rounded,
+            villageIcon: Icons.cottage,
             titleTe: 'ఇంటి నంబరు ద్వారా',
             titleEn: 'Search by House Number',
-            subtitleTe: 'మొత్తం కుటుంబ వివరాలు',
-            subtitleEn: 'All family members at that house',
-            color: const Color(0xFFBF360C),
+            subtitleEn: 'See all family members at that house',
+            color: _V.terracotta,
             onTap: () => _navigate(context, SearchType.byHouseNumber),
           ),
         ],
@@ -152,33 +107,277 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildDisclaimer(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        'Mana Talamudipi v1.0  •  మన తలముడిపి',
-        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        children: [
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: () => _showAboutDialog(context),
+            icon: const Icon(Icons.info_outline_rounded, size: 14),
+            label: const Text(
+              'About this app  •  యాప్ గురించి',
+              style: TextStyle(fontSize: 11, fontFamily: 'NotoSansTelugu'),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[500],
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Mana Talamudipi v1.0',
+            style: TextStyle(fontSize: 9, color: Colors.grey[400]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: _V.forestGreen, size: 22),
+            SizedBox(width: 8),
+            Text('About  •  గురించి', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This app is NOT an official government service.',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'It is a free community helper tool to quickly check voter details in English and Telugu.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'ఈ యాప్ ప్రభుత్వ అధికారిక సేవ కాదు.',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontFamily: 'NotoSansTelugu',
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'ఓటరు వివరాలు తెలుగు మరియు ఇంగ్లీషులో త్వరగా చూసుకోవడానికి ఇది ఒక ఉచిత సమాజ సహాయ సాధనం.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[700],
+                fontFamily: 'NotoSansTelugu',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: _V.forestGreen),
+            child: const Text(
+              'సరే  •  OK',
+              style: TextStyle(fontFamily: 'NotoSansTelugu'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Search option card ───────────────────────────────────────────────────────
+// ── Village header ────────────────────────────────────────────────────────────
+
+class _VillageHeader extends StatelessWidget {
+  const _VillageHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF558B2F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(36),
+          bottomRight: Radius.circular(36),
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Decorative background nature icons
+          const Positioned(
+            top: 10, right: 14,
+            child: Row(
+              children: [
+                Icon(Icons.park, color: Color(0x30FFFFFF), size: 44),
+                SizedBox(width: 2),
+                Icon(Icons.park, color: Color(0x20FFFFFF), size: 30),
+              ],
+            ),
+          ),
+          const Positioned(
+            bottom: 14, left: 14,
+            child: Icon(Icons.cottage, color: Color(0x25FFFFFF), size: 40),
+          ),
+          const Positioned(
+            bottom: 8, right: 60,
+            child: Icon(Icons.grass, color: Color(0x20FFFFFF), size: 28),
+          ),
+          // Main content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 26),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.30), width: 1.5),
+                  ),
+                  child: const Icon(Icons.how_to_vote_rounded, size: 40, color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Mana Talamudipi',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'మన తలముడిపి',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.white.withOpacity(0.88),
+                    fontFamily: 'NotoSansTelugu',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<int>(
+                  future: DbHelper.instance.totalVoters(),
+                  builder: (context, snap) {
+                    final count = snap.data ?? 0;
+                    final label = count > 0
+                        ? 'మొత్తం ఓటర్లు: $count  •  Total Voters: $count'
+                        : 'ఓటరు సమాచారం  •  Voter Information';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white.withOpacity(0.28), width: 1),
+                      ),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontFamily: 'NotoSansTelugu',
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Village scene decoration bar ─────────────────────────────────────────────
+
+class _VillageSceneBar extends StatelessWidget {
+  const _VillageSceneBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _V.lightGreenBg,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: const [
+          _VSceneIcon(icon: Icons.grass,        label: 'పొలాలు',    color: Color(0xFF388E3C)),
+          _VSceneIcon(icon: Icons.park,         label: 'అడవి',      color: Color(0xFF2E7D32)),
+          _VSceneIcon(icon: Icons.cottage,      label: 'ఇళ్ళు',     color: Color(0xFF795548)),
+          _VSceneIcon(icon: Icons.agriculture,  label: 'రైతులు',    color: Color(0xFFF9A825)),
+          _VSceneIcon(icon: Icons.water_drop,   label: 'చెరువు',    color: Color(0xFF1565C0)),
+          _VSceneIcon(icon: Icons.eco,          label: 'పర్యావరణం', color: Color(0xFF43A047)),
+        ],
+      ),
+    );
+  }
+}
+
+class _VSceneIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _VSceneIcon({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 26),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 8,
+            color: color,
+            fontFamily: 'NotoSansTelugu',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Search card ───────────────────────────────────────────────────────────────
 
 class _SearchCard extends StatelessWidget {
   final IconData icon;
+  final IconData villageIcon;
   final String titleTe;
   final String titleEn;
-  final String subtitleTe;
   final String subtitleEn;
   final Color color;
   final VoidCallback onTap;
 
   const _SearchCard({
     required this.icon,
+    required this.villageIcon,
     required this.titleTe,
     required this.titleEn,
-    required this.subtitleTe,
     required this.subtitleEn,
     required this.color,
     required this.onTap,
@@ -187,58 +386,72 @@ class _SearchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      shadowColor: color.withOpacity(0.25),
+      elevation: 3,
+      shadowColor: color.withOpacity(0.22),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(
-            children: [
-              // Icon badge
-              Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(14),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: color, width: 5)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                // Icon badge
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: color.withOpacity(0.22)),
+                  ),
+                  child: Icon(icon, color: color, size: 28),
                 ),
-                child: Icon(icon, color: color, size: 30),
-              ),
-              const SizedBox(width: 16),
-              // Text
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 14),
+                // Text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titleTe,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                          fontFamily: 'NotoSansTelugu',
+                        ),
+                      ),
+                      Text(
+                        titleEn,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitleEn,
+                        style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+                // Village accent + arrow
+                Column(
                   children: [
-                    Text(
-                      titleTe,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                        fontFamily: 'NotoSansTelugu',
-                      ),
-                    ),
-                    Text(
-                      titleEn,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitleEn,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
+                    Icon(villageIcon, color: color.withOpacity(0.35), size: 18),
+                    const SizedBox(height: 6),
+                    Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
                   ],
                 ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 22),
-            ],
+              ],
+            ),
           ),
         ),
       ),

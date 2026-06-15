@@ -16,90 +16,102 @@ class VoterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFemale = voter.gender.toLowerCase() == 'female';
+    final avatarColor = isFemale ? const Color(0xFFAD1457) : const Color(0xFF2E7D32);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
-      elevation: 1.5,
+      elevation: 2,
+      shadowColor: accentColor.withOpacity(0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: accentColor.withOpacity(0.12),
-                child: Text(
-                  voter.voterName.isNotEmpty ? voter.voterName[0] : '?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: accentColor,
-                    fontFamily: 'NotoSansTelugu',
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: accentColor, width: 4)),
+            ),
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              children: [
+                // Avatar
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: avatarColor.withOpacity(0.12),
+                  child: Icon(
+                    isFemale ? Icons.person : Icons.person_outline_rounded,
+                    size: 26,
+                    color: avatarColor,
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      voter.voterName.isEmpty ? '(పేరు లేదు)' : voter.voterName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'NotoSansTelugu',
+                const SizedBox(width: 12),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        voter.voterName.isEmpty ? '(పేరు లేదు)' : voter.voterName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'NotoSansTelugu',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        _Tag(
-                          icon: Icons.badge_outlined,
-                          label: voter.voterId,
-                          color: accentColor,
-                        ),
-                        const SizedBox(width: 8),
-                        _Tag(
-                          icon: Icons.home_outlined,
-                          label: 'H: ${voter.houseNumber}',
-                          color: Colors.grey[600]!,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (voter.age > 0)
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
                           _Tag(
-                            icon: Icons.cake_outlined,
-                            label: '${voter.age} yrs',
-                            color: Colors.grey[600]!,
+                            icon: Icons.badge_outlined,
+                            label: voter.voterId,
+                            color: accentColor,
                           ),
-                        if (voter.age > 0) const SizedBox(width: 8),
-                        if (voter.gender.isNotEmpty)
+                          const SizedBox(width: 8),
                           _Tag(
-                            icon: voter.gender.toLowerCase() == 'male'
-                                ? Icons.male
-                                : Icons.female,
-                            label: voter.gender,
-                            color: voter.gender.toLowerCase() == 'male'
-                                ? Colors.blue[700]!
-                                : Colors.pink[700]!,
+                            icon: Icons.cottage_outlined,
+                            label: 'H: ${voter.houseNumber}',
+                            color: const Color(0xFF795548),
                           ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          if (voter.age > 0)
+                            _Tag(
+                              icon: Icons.cake_outlined,
+                              label: '${voter.age} yrs',
+                              color: Colors.grey[600]!,
+                            ),
+                          if (voter.age > 0) const SizedBox(width: 8),
+                          if (voter.gender.isNotEmpty)
+                            _Tag(
+                              icon: isFemale ? Icons.female : Icons.male,
+                              label: voter.gender,
+                              color: isFemale
+                                  ? const Color(0xFFAD1457)
+                                  : const Color(0xFF1565C0),
+                            ),
+                          if (voter.partName.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            _Tag(
+                              icon: Icons.article_outlined,
+                              label: voter.partName,
+                              color: Colors.grey[500]!,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
-            ],
+                Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+              ],
+            ),
           ),
         ),
       ),
