@@ -1,111 +1,67 @@
-/// Lightweight English → Telugu transliteration.
+/// Lightweight English → Telugu transliteration + phonetic normalization.
 ///
-/// Given an English query like "faizullah" or "raju reddy",
-/// produces a list of Telugu phonetic candidates that can be used
-/// in SQL LIKE patterns to search the voters table.
+/// Primary use: English name search against Telugu voter records.
 ///
-/// Strategy:
-///   1. Normalise the input (lowercase, strip extra spaces).
-///   2. Use a greedy, longest-match-first mapping of English phonemes
-///      to Telugu aksharas.
-///   3. Return ALL plausible Telugu renderings (handles alternate
-///      vowel representations, e.g. "a" → both "" and "ా").
+/// The DB stores a `name_roman_norm` column which is the phonetic skeleton of
+/// each Telugu voter name (e.g. ఫైజుల్లా → "fjl"). When the user types English,
+/// we apply the same normalization to their query and search that column.
 ///
-/// This is intentionally approximate — the goal is recall (find everyone
-/// whose name sounds like the input), not precision.
+/// Normalization rules (identical in Python extractor and here):
+///   ph→f  sh→x  th→t  dh→d  bh→b  gh→g  ch→c  ng→n
+///   z→j  w→v  y→i  q→k
+///   strip vowels (aeiou)
+///   collapse duplicate letters (ll→l)
+///   strip trailing silent h
 
 class Transliterator {
   Transliterator._();
 
-  // ── Ordered phoneme map (longest match first) ──────────────────────────
-  // Each entry: (english_pattern, telugu_string)
-  // Patterns are tried left-to-right; first match wins.
-  static const List<(String, String)> _map = [
-    // ── Multi-char consonant clusters ──────────────────────────────────────
-    ('ksh', 'క్ష'), ('jn',  'జ్ఞ'), ('shr', 'శ్ర'),
-    ('thr', 'థ్ర'), ('ndr', 'ంద్ర'),
-    // ── Double consonants ──────────────────────────────────────────────────
-    ('bb', 'బ్బ'), ('cc', 'క్క'), ('dd', 'డ్డ'), ('ff', 'ఫ్'), ('gg', 'గ్గ'),
-    ('hh', 'హ్హ'), ('jj', 'జ్జ'), ('kk', 'క్క'), ('ll', 'ల్ల'), ('mm', 'మ్మ'),
-    ('nn', 'న్న'), ('pp', 'ప్ప'), ('rr', 'ర్ర'), ('ss', 'స్స'), ('tt', 'ట్ట'),
-    ('vv', 'వ్వ'), ('yy', 'య్య'), ('zz', 'జ్జ'),
-    // ── Digraphs ───────────────────────────────────────────────────────────
-    ('sh', 'శ'), ('ph', 'ఫ'), ('gh', 'ఘ'), ('ch', 'చ'), ('dh', 'ధ'),
-    ('th', 'థ'), ('bh', 'భ'), ('kh', 'ఖ'), ('jh', 'ఝ'), ('nh', 'ణ'),
-    ('ng', 'ంగ'), ('nk', 'ంక'), ('ai', 'ై'), ('au', 'ౌ'), ('oo', 'ూ'),
-    ('ee', 'ీ'), ('ou', 'ౌ'), ('aa', 'ా'), ('ii', 'ీ'), ('uu', 'ూ'),
-    ('ae', 'ై'),
-    // ── Vowels ─────────────────────────────────────────────────────────────
-    ('a', 'అ'), ('e', 'ె'), ('i', 'ి'), ('o', 'ో'), ('u', 'ు'),
-    // ── Single consonants ──────────────────────────────────────────────────
-    ('b', 'బ'), ('c', 'క'), ('d', 'డ'), ('f', 'ఫ'), ('g', 'గ'),
-    ('h', 'హ'), ('j', 'జ'), ('k', 'క'), ('l', 'ల'), ('m', 'మ'),
-    ('n', 'న'), ('p', 'ప'), ('q', 'క'), ('r', 'ర'), ('s', 'స'),
-    ('t', 'త'), ('v', 'వ'), ('w', 'వ'), ('x', 'క్స'), ('y', 'య'),
-    ('z', 'జ'),
-  ];
-
-  // ── Pre-built sorted map (longest key first) ─────────────────────────────
-  static final List<(String, String)> _sorted = () {
-    final copy = List<(String, String)>.from(_map);
-    copy.sort((a, b) => b.$1.length.compareTo(a.$1.length));
-    return copy;
-  }();
-
-  /// Transliterate [english] text to a Telugu string.
-  ///
-  /// Example: `transliterate("faizullah")` → `"ఫైజుల్లాహ్"`
-  static String transliterate(String english) {
-    final src = english.toLowerCase().trim();
-    final buf = StringBuffer();
-    int i = 0;
-    while (i < src.length) {
-      bool matched = false;
-      for (final (eng, tel) in _sorted) {
-        if (src.startsWith(eng, i)) {
-          buf.write(tel);
-          i += eng.length;
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) {
-        // Keep unknown characters as-is (digits, spaces, hyphens)
-        buf.write(src[i]);
-        i++;
-      }
-    }
-    return buf.toString();
-  }
-
-  /// Returns true if [input] contains only ASCII letters/digits/spaces/hyphens
-  /// (i.e. the user typed in English, not Telugu).
+  /// Returns true if [input] is entirely ASCII (English input, not Telugu).
   static bool isEnglish(String input) {
     return RegExp(r'^[a-zA-Z0-9 \-\.]+$').hasMatch(input.trim());
   }
 
-  /// Given a raw search query, returns the Telugu string to use in SQL LIKE.
+  /// Normalize an English name to a phonetic skeleton for DB lookup.
   ///
-  /// If [query] is already Telugu → returns it unchanged.
-  /// If [query] is English → transliterates it.
-  /// Returns empty string if [query] is blank.
-  static String toTeluguPattern(String query) {
-    final q = query.trim();
-    if (q.isEmpty) return '';
-    if (!isEnglish(q)) return q; // already Telugu
-    return transliterate(q);
+  /// "faizullah" → "fjl"   matches DB "fjl" (from ఫైజుల్లా)
+  /// "krishna"   → "krxn"  matches DB "krxn" (from కృష్ణా)
+  /// "reddy"     → "rd"    matches DB "rd" (from రెడ్డి)
+  static String normalizeForSearch(String s) {
+    s = s.toLowerCase();
+    // Multi-char substitutions (order matters — longest first)
+    const multi = [
+      ('ph', 'f'), ('sh', 'x'), ('th', 't'), ('dh', 'd'),
+      ('bh', 'b'), ('gh', 'g'), ('ch', 'c'), ('ng', 'n'),
+    ];
+    for (final (from, to) in multi) {
+      s = s.replaceAll(from, to);
+    }
+    // Single-char substitutions
+    s = s.replaceAll('z', 'j');
+    s = s.replaceAll('w', 'v');
+    s = s.replaceAll('y', 'i');
+    s = s.replaceAll('q', 'k');
+    // Strip vowels
+    s = s.replaceAll(RegExp(r'[aeiou]'), '');
+    // Collapse consecutive identical chars (ll→l, tt→t, etc.)
+    s = s.replaceAllMapped(RegExp(r'(.)\1+'), (m) => m.group(1)!);
+    // Strip trailing silent h
+    if (s.endsWith('h')) s = s.substring(0, s.length - 1);
+    return s;
   }
 
-  /// Splits a multi-word English query and returns Telugu patterns
-  /// for each word (useful for "first last" name searches).
+  /// For a multi-word English query, normalize each word separately.
+  /// Returns a list of patterns to LIKE-search (one per word).
   ///
-  /// e.g. "raju reddy" → ["రాజు", "రెడ్డి"]
-  static List<String> wordsToTeluguPatterns(String query) {
+  /// "faiz ullah" → ["fjl"] … actually joined as single norm per word
+  static List<String> wordsNormalized(String query) {
     return query
         .trim()
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
-        .map(transliterate)
+        .map(normalizeForSearch)
+        .where((w) => w.isNotEmpty)
         .toList();
   }
 }
+

@@ -87,6 +87,113 @@ def _fix_telugu_order(text: str) -> str:
     return text
 
 
+# -- Telugu → phonetic Roman conversion  -------------------------------------
+# Used to build a searchable ASCII column so users can type English names.
+
+_TEL_CONSONANT_MAP = {
+    'క': 'k',  'ఖ': 'kh', 'గ': 'g',  'ఘ': 'gh', 'ఙ': 'ng',
+    'చ': 'ch', 'ఛ': 'chh','జ': 'j',  'ఝ': 'jh', 'ఞ': 'ny',
+    'ట': 't',  'ఠ': 'th', 'డ': 'd',  'ఢ': 'dh', 'ణ': 'n',
+    'త': 't',  'థ': 'th', 'ద': 'd',  'ధ': 'dh', 'న': 'n',
+    'ప': 'p',  'ఫ': 'f',  'బ': 'b',  'భ': 'bh', 'మ': 'm',
+    'య': 'y',  'ర': 'r',  'ల': 'l',  'వ': 'v',  'శ': 'sh',
+    'ష': 'sh', 'స': 's',  'హ': 'h',  'ళ': 'l',  'ఱ': 'r',
+}
+_TEL_VOWEL_MAP = {
+    'అ': 'a',  'ఆ': 'aa', 'ఇ': 'i',  'ఈ': 'ee', 'ఉ': 'u',
+    'ఊ': 'oo', 'ఋ': 'ru', 'ఎ': 'e',  'ఏ': 'ae', 'ఐ': 'ai',
+    'ఒ': 'o',  'ఓ': 'oo', 'ఔ': 'au',
+}
+_TEL_MATRA_MAP = {
+    'ా': 'aa', 'ి': 'i',  'ీ': 'ee', 'ు': 'u',  'ూ': 'oo',
+    'ృ': 'ru', 'ె': 'e',  'ే': 'ae', 'ై': 'ai', 'ొ': 'o',
+    'ో': 'oo', 'ౌ': 'au',
+}
+_VIRAMA  = '\u0C4D'   # ్
+_ANUSVARA = '\u0C02'  # ం
+_VISARGA  = '\u0C03'  # ః
+
+def _telugu_to_roman(text: str) -> str:
+    """Convert Telugu Unicode → phonetic ASCII (e.g. ఫైజుల్లా → faijulaa)."""
+    chars = list(text)
+    n = len(chars)
+    out = []
+    i = 0
+    while i < n:
+        c = chars[i]
+        if c in _TEL_CONSONANT_MAP:
+            out.append(_TEL_CONSONANT_MAP[c])
+            if i + 1 < n:
+                nxt = chars[i + 1]
+                if nxt == _VIRAMA:
+                    i += 2          # no inherent vowel — skip virama
+                    continue
+                elif nxt in _TEL_MATRA_MAP:
+                    out.append(_TEL_MATRA_MAP[nxt])
+                    i += 2
+                    continue
+                else:
+                    out.append('a') # inherent vowel
+            i += 1
+        elif c in _TEL_VOWEL_MAP:
+            out.append(_TEL_VOWEL_MAP[c])
+            i += 1
+        elif c in _TEL_MATRA_MAP:
+            out.append(_TEL_MATRA_MAP[c])
+            i += 1
+        elif c == _ANUSVARA:
+            out.append('n')
+            i += 1
+        elif c == _VISARGA:
+            out.append('h')
+            i += 1
+        elif c == _VIRAMA:
+            i += 1  # stray virama — skip
+        elif c == ' ':
+            out.append(' ')
+            i += 1
+        else:
+            out.append(c.lower())
+            i += 1
+    return ''.join(out).lower()
+
+
+_NORMALIZE_SUB = re.compile(r'(.)\1+')   # collapse repeated chars
+
+def _normalize_roman(s: str) -> str:
+    """
+    Reduce a romanized Telugu name (or English input) to a phonetic skeleton
+    that is invariant to common spelling variations:
+      faizullah → fjl   (same as  faijulaa → fjl)
+      krishna   → krxn  (same as  krushna  → krxn)
+      reddy     → rd    (same as  reddi    → rd  )
+    Rules applied (in order):
+      1. lowercase
+      2. multi-char: ph→f  sh→x  th→t  dh→d  bh→b  gh→g  ch→c  ng→n
+      3. single: z→j  w→v  y→i  q→k
+      4. strip all vowels (aeiou)
+      5. collapse consecutive identical letters (ll→l, tt→t …)
+      6. strip trailing silent h
+    """
+    s = s.lower()
+    for src, dst in [('ph','f'),('sh','x'),('th','t'),('dh','d'),
+                     ('bh','b'),('gh','g'),('ch','c'),('ng','n')]:
+        s = s.replace(src, dst)
+    for src, dst in [('z','j'),('w','v'),('y','i'),('q','k')]:
+        s = s.replace(src, dst)
+    s = re.sub(r'[aeiou]', '', s)
+    s = _NORMALIZE_SUB.sub(r'\1', s)
+    s = re.sub(r'h$', '', s)
+    return s
+
+
+def _name_norm(telugu_text: str) -> str:
+    """Full pipeline: Telugu → roman → normalized skeleton (for search index)."""
+    roman = _telugu_to_roman(telugu_text)
+    # Normalize each word and join with space
+    return ' '.join(_normalize_roman(w) for w in roman.split())
+
+
 # -- GSUB-based Telugu font decoder -------------------------------------------
 
 def _build_gsub_map(tt: 'TTFont') -> dict:
@@ -272,12 +379,14 @@ def create_db(db_path: str) -> sqlite3.Connection:
             age               INTEGER,
             voter_id          TEXT,
             gender            TEXT,
-            part_name         TEXT DEFAULT ""
+            part_name         TEXT DEFAULT "",
+            name_roman_norm   TEXT DEFAULT ""
         );
-        CREATE INDEX IF NOT EXISTS idx_voter_id     ON voters(voter_id);
-        CREATE INDEX IF NOT EXISTS idx_house_number ON voters(house_number);
-        CREATE INDEX IF NOT EXISTS idx_voter_name   ON voters(voter_name);
-        CREATE INDEX IF NOT EXISTS idx_part_name    ON voters(part_name);
+        CREATE INDEX IF NOT EXISTS idx_voter_id       ON voters(voter_id);
+        CREATE INDEX IF NOT EXISTS idx_house_number   ON voters(house_number);
+        CREATE INDEX IF NOT EXISTS idx_voter_name     ON voters(voter_name);
+        CREATE INDEX IF NOT EXISTS idx_part_name      ON voters(part_name);
+        CREATE INDEX IF NOT EXISTS idx_name_roman     ON voters(name_roman_norm);
     ''')
     conn.commit()
     return conn
@@ -290,8 +399,9 @@ def _insert_batch(conn: sqlite3.Connection, records: list):
         cur.execute('''
             INSERT INTO voters
                 (serial_no, house_number, voter_name, relationship_type,
-                 relationship_name, age, voter_id, gender, part_name)
-            VALUES (?,?,?,?,?,?,?,?,?)
+                 relationship_name, age, voter_id, gender, part_name,
+                 name_roman_norm)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
         ''', (
             r.get('serial_no', ''),
             r.get('house_number', ''),
@@ -302,6 +412,7 @@ def _insert_batch(conn: sqlite3.Connection, records: list):
             r.get('voter_id', ''),
             r.get('gender', ''),
             r.get('part_name', ''),
+            r.get('name_roman_norm', ''),
         ))
     conn.commit()
 
@@ -351,16 +462,18 @@ def extract_from_pdf(pdf_path: str, part_name: str = '',
         w = all_lines[i: i + 8]
         if (_is_serial(w[0]) and _is_house_no(w[1])
                 and _is_age(w[6]) and _is_voter_id(w[7])):
+            vname = _fix_telugu_order(w[2])
             records.append({
                 'serial_no':         w[0],
                 'house_number':      w[1],
-                'voter_name':        _fix_telugu_order(w[2]),
+                'voter_name':        vname,
                 'relationship_type': _normalise_rel_type(w[3]),
                 'relationship_name': _fix_telugu_order(w[4]),
                 'gender':            _normalise_gender(w[5]),
                 'age':               int(w[6]),
                 'voter_id':          w[7].upper(),
                 'part_name':         part_name,
+                'name_roman_norm':   _name_norm(vname),
             })
             i += 8
         else:

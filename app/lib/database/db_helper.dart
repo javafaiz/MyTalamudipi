@@ -80,26 +80,40 @@ class DbHelper {
     return rows.map(Voter.fromMap).toList();
   }
 
-  /// Returns voters whose name contains [name].
-  /// Accepts both Telugu input (direct match) and English input
-  /// (auto-transliterated — e.g. "faizullah" finds "ఫైజుల్లా").
+  /// Returns voters whose name matches [name].
+  /// Accepts both Telugu input (direct LIKE on voter_name) and English input
+  /// (normalized phonetic search on name_roman_norm column).
+  ///
+  /// English examples: "faizullah", "raju reddy", "krishna", "suresh"
   Future<List<Voter>> searchByName(String name) async {
     final db = await database;
     final input = name.trim();
     if (input.isEmpty) return [];
 
-    // Convert English → Telugu if needed
-    final teluguQuery = Transliterator.toTeluguPattern(input);
-    final pattern = '%$teluguQuery%';
-
-    final rows = await db.query(
-      'voters',
-      where: 'voter_name LIKE ?',
-      whereArgs: [pattern],
-      orderBy: 'voter_name',
-      limit: 100,
-    );
-    return rows.map(Voter.fromMap).toList();
+    if (Transliterator.isEnglish(input)) {
+      // Normalize the English query the same way the DB column was built.
+      // e.g. "faizullah" → "fjl", "krishna" → "krxn", "reddy" → "rd"
+      final norm = Transliterator.normalizeForSearch(input);
+      if (norm.isEmpty) return [];
+      final rows = await db.query(
+        'voters',
+        where: 'name_roman_norm LIKE ?',
+        whereArgs: ['%$norm%'],
+        orderBy: 'voter_name',
+        limit: 100,
+      );
+      return rows.map(Voter.fromMap).toList();
+    } else {
+      // Telugu input — direct partial match
+      final rows = await db.query(
+        'voters',
+        where: 'voter_name LIKE ?',
+        whereArgs: ['%$input%'],
+        orderBy: 'voter_name',
+        limit: 100,
+      );
+      return rows.map(Voter.fromMap).toList();
+    }
   }
 
   /// Returns all voters belonging to the given [houseNumber] (whole family).
