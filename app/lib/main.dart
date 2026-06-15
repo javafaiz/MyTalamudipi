@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'database/db_helper.dart';
 import 'screens/home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Prevent google_fonts from trying to download fonts over the network.
+  // All fonts are already bundled in assets/fonts/.
+  GoogleFonts.config.allowRuntimeFetching = false;
   runApp(const MyTalamudipiApp());
 }
 

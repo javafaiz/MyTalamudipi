@@ -30,44 +30,14 @@ class DbHelper {
     final dbPath = join(dir.path, 'voters.db');
 
     if (!await File(dbPath).exists()) {
-      // Load asset as bytes — works for large DBs (50–100 MB)
+      // Load asset bytes and write directly — avoids double-buffering in RAM
       final data = await rootBundle.load('assets/voters.db');
-      final total = data.lengthInBytes;
-      final bytes = data.buffer.asUint8List(data.offsetInBytes, total);
-
-      // Write in 1 MB chunks so progress can be reported
-      const chunkSize = 1024 * 1024; // 1 MB
-      final file = File(dbPath).openWrite();
-      int offset = 0;
-      while (offset < total) {
-        final end = (offset + chunkSize).clamp(0, total);
-        file.add(bytes.sublist(offset, end));
-        offset = end;
-        onCopyProgress?.call(offset, total);
-      }
-      await file.flush();
-      await file.close();
+      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      await File(dbPath).writeAsBytes(bytes, flush: true);
+      onCopyProgress?.call(bytes.length, bytes.length);
     }
 
-    return openDatabase(
-      dbPath,
-      readOnly: true,
-      onOpen: (db) async {
-        // Gracefully add part_name column if the bundled DB was built
-        // without it (older extractions).  SQLite silently ignores it if
-        // it already exists because of the IF NOT EXISTS guard in the
-        // PRAGMA column-check below.
-        final columns = await db.rawQuery("PRAGMA table_info(voters)");
-        final hasPartName = columns.any((c) => c['name'] == 'part_name');
-        if (!hasPartName) {
-          // openDatabase was called readOnly; re-open writable just for migration.
-          final rw = await openDatabase(dbPath);
-          await rw.execute(
-              "ALTER TABLE voters ADD COLUMN part_name TEXT DEFAULT ''");
-          await rw.close();
-        }
-      },
-    );
+    return openDatabase(dbPath, readOnly: true);
   }
 
   // ── Search methods ──────────────────────────────────────────────────────────
