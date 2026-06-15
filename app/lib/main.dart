@@ -168,8 +168,8 @@ class _SplashLoaderState extends State<_SplashLoader> {
                 ),
               ],
             ),
-          ],
-        ),
+          ),  // Center
+        ],
       ),
     );
   }
