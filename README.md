@@ -1,377 +1,218 @@
-# MY Talamudipi — మీ తలముడిపి
+# Talamudipi SIR Information — తలముడిపి ఓటర్ల జాబితా
 
-Telugu Voter Information Search App for Android.
+Android app to search the **2002 Special Intensive Revision (SIR)** voter list for Talamudipi village.
 
-Search voters from a Telugu PDF by **Name**, **Voter ID (EPIC)**, or **House Number**.
-
----
-
-## Build Options
-
-| Method | Requirements | Time |
-|---|---|---|
-| **GitHub Actions (cloud)** | GitHub account + internet | ~5 min |
-| Local (Android Studio) | Android Studio + Flutter SDK | setup ~1 hr |
-| Local (cmdline tools) | Flutter SDK + Android cmdline-tools | setup ~30 min |
-
-> **Recommended if Android Studio is not installed:** use the GitHub Actions method below — the APK is built in the cloud and downloaded as an artifact.
+Search by **Name** (Telugu or English), **Serial No.**, **Voter ID (EPIC)**, or **House Number**.
 
 ---
 
-## Option A — Build via GitHub Actions (No Android Studio Required)
+## How it works
 
-This uses GitHub's free CI/CD runners. You need a free GitHub account.
+```
+Electoral Roll PDFs  →  extract_voters.py  →  voters.db  →  GitHub Actions  →  APK
+```
 
-### A1 — Push the project to GitHub
+1. Download the PDF electoral rolls from the government website.
+2. Run `extract_voters.py` locally — it reads the Telugu PDFs and writes a SQLite database (`voters.db`).
+3. Push the project (including `voters.db`) to GitHub.
+4. GitHub Actions automatically builds the Android APK in the cloud (~5 min).
+5. Download the APK from the Actions tab and install on your phone.
 
-1. Go to https://github.com/new and create a **new private repository** (e.g. `MyTalamudipi`).
-2. Install Git: https://git-scm.com/download/win  
-3. Open PowerShell in the project folder and run:
+No Android Studio required. No local Flutter setup required.
+
+---
+
+## Step 1 — Download the Electoral Roll PDFs
+
+The voter PDFs are published by the Election Commission of India.
+
+1. Go to: **https://ceoandhra.nic.in** (Andhra Pradesh) or **https://cetelangana.nic.in** (Telangana)
+2. Navigate to: **Electoral Rolls → Final Rolls → Select District → Select Constituency → Select Part**
+3. Download the PDF for each Part that covers Talamudipi village.
+   - File names follow the pattern: `S01_185_140.pdf`, `S01_185_141.pdf` etc.
+   - Parts 140–143 cover Talamudipi (Nandikotkur constituency, Kurnool district).
+4. Save all PDFs to a folder, e.g. `C:\Downloads\voter_pdfs\`
+
+> The PDFs use the **Gautami** Telugu font with Identity-H encoding. The extractor handles this
+> automatically using GSUB font table decoding — no manual conversion needed.
+
+---
+
+## Step 2 — Install Python Dependencies
+
+The extractor needs **PyMuPDF** and **fontTools**.
+
+```powershell
+pip install pymupdf fonttools
+```
+
+---
+
+## Step 3 — Preview the PDF (optional sanity check)
+
+Before extracting all records, check that Telugu text is decoded correctly:
 
 ```powershell
 cd "C:\Users\MF40127873\Desktop\MyTalamudipi"
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/MyTalamudipi.git
-git push -u origin main
+python scripts\extract_voters.py --pdf C:\Downloads\voter_pdfs\S01_185_140.pdf --preview
+```
+
+You should see Telugu names like `రెడ్డి`, `హుస్సేన్`, `కృష్ణ` in the output.
+
+---
+
+## Step 4 — Extract All PDFs to Database
+
+### Single PDF:
+```powershell
+python scripts\extract_voters.py --pdf C:\Downloads\voter_pdfs\S01_185_140.pdf
+```
+
+### Entire folder (recommended — processes all parts at once):
+```powershell
+python scripts\extract_voters.py --pdf-dir C:\Downloads\voter_pdfs\
+```
+
+Expected output:
+```
+DB   : ...\app\assets\voters.db
+PDFs : 4 file(s)
+
+[1/4] S01_185_140.pdf
+  -> 696 records  (Part 140)
+[2/4] S01_185_141.pdf
+  -> 633 records  (Part 141)
+[3/4] S01_185_142.pdf
+  -> 606 records  (Part 142)
+[4/4] S01_185_143.pdf
+  -> 558 records  (Part 143)
+
+Total records in DB : 2,493
+```
+
+The database is saved to `app\assets\voters.db` automatically.
+
+### Extractor flags:
+
+| Flag | Description | Example |
+|---|---|---|
+| `--pdf` | Single PDF file | `--pdf S01_185_140.pdf` |
+| `--pdf-dir` | Folder of PDFs | `--pdf-dir C:\Downloads\voter_pdfs\` |
+| `--db` | Custom output path | `--db C:\my_data\voters.db` |
+| `--preview` | Print decoded lines without saving | `--preview` |
+| `--pages N` | Limit to first N pages (for testing) | `--pages 5` |
+
+---
+
+## Step 5 — Build the APK via GitHub Actions
+
+> The APK is built in GitHub's cloud — no Android Studio, no Flutter SDK needed locally.
+
+### 5a — Create a GitHub repository
+
+1. Go to **https://github.com/new**
+2. Create a **private** repository named `MyTalamudipi`
+3. Do **not** initialize with README
+
+### 5b — Push the project to GitHub
+
+Open PowerShell in the project folder:
+
+```powershell
+$git = "C:\Users\MF40127873\AppData\Local\Programs\Git\cmd\git.exe"
+Set-Location "C:\Users\MF40127873\Desktop\MyTalamudipi"
+
+& $git init
+& $git add .
+& $git commit -m "Initial commit"
+& $git branch -M main
+& $git remote add origin https://github.com/YOUR_USERNAME/MyTalamudipi.git
+& $git push -u origin main
 ```
 
 > Replace `YOUR_USERNAME` with your GitHub username.
 
-### A2 — Extract voter data first (required for the APK to have data)
-
-Before pushing, run the PDF extractor locally to create `app/assets/voters.db`:
+### 5c — Push updates (after re-extracting PDFs or changing code)
 
 ```powershell
-pip install pdfminer.six
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi"
-python scripts\extract_voters.py
+$git = "C:\Users\MF40127873\AppData\Local\Programs\Git\cmd\git.exe"
+Set-Location "C:\Users\MF40127873\Desktop\MyTalamudipi"
+& $git add .
+& $git commit -m "Update voters.db"
+& $git push origin main
 ```
 
-Then push the generated database to GitHub:
+Every push to `main` automatically triggers a new APK build.
 
-```powershell
-git add app/assets/voters.db
-git commit -m "Add voters database"
-git push
-```
+### 5d — Download the APK
 
-> **Note:** If `voters.db` is larger than 100 MB, use [Git LFS](https://git-lfs.github.com/) to track it.
-
-### A3 — Download the built APK
-
-1. Go to your GitHub repository page.
-2. Click **Actions** tab → select the latest **"Build Flutter APK"** workflow run.
-3. Scroll down to **Artifacts** → click **`my-talamudipi-release-apk`** to download.
-4. Unzip the downloaded file — `app-release.apk` is inside.
-
-> The workflow file is already included at `.github/workflows/build-apk.yml`.  
-> If no `voters.db` is committed, the workflow creates an empty schema-only database so the APK still builds and installs correctly (just shows no results until data is loaded).
+1. Go to your GitHub repository page
+2. Click **Actions** tab
+3. Click the latest **"Build Flutter APK"** run (green ✅)
+4. Scroll to **Artifacts** → click **`my-talamudipi-release-apk`** to download
+5. Unzip → `app-release.apk` is inside
 
 ---
 
-## Option B — Local Build (with Android Studio)
-
-## Prerequisites
-
-Install the following before proceeding:
-
-| Tool | Download Link | Version |
-|---|---|---|
-| Python 3.10+ | https://www.python.org/downloads/ | 3.10 or newer |
-| Android Studio | https://developer.android.com/studio | Hedgehog or newer |
-| Flutter SDK | https://docs.flutter.dev/get-started/install/windows | 3.24 or newer |
-| Git | https://git-scm.com/download/win | Any recent |
-
-> **Note:** During Python install, tick **"Add Python to PATH"**.
-
----
-
-## Step 1 — Install Python Dependencies
-
-Open PowerShell and run:
-
-```powershell
-pip install pdfminer.six
-```
-
----
-
-## Step 2 — Preview PDF Extraction (Optional but Recommended)
-
-Before extracting all data, verify the Telugu text is read correctly:
-
-```powershell
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi"
-python scripts\extract_voters.py --preview
-```
-
-This prints the first 100 raw lines from the PDF.  
-- If you see Telugu text (e.g. `రాజు`, `మహేష్`) — you are good to go.  
-- If you see garbled text (e.g. `ÃÂ`) — run `python scripts\check_cmap.py` and share the output.
-
----
-
-## Step 3 — Extract Voter Data to Database
-
-```powershell
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi"
-python scripts\extract_voters.py
-```
-
-This reads the PDF and creates:
-
-```
-app\assets\voters.db
-```
-
-For a large PDF (2–5 lakh records) this may take **10–30 minutes**.  
-You will see progress printed in the terminal.
-
----
-
-## Step 4 — Install Flutter SDK
-
-1. Download the Flutter ZIP from https://docs.flutter.dev/get-started/install/windows  
-2. Extract to `C:\flutter`
-3. Add `C:\flutter\bin` to your Windows **PATH**:
-   - Search → **Edit the system environment variables** → Environment Variables  
-   - Under *User variables* → select **Path** → Edit → New → `C:\flutter\bin` → OK
-4. Open a **new** PowerShell and verify:
-   ```powershell
-   flutter --version
-   ```
-
----
-
-## Step 5 — Install Android Studio and Set Up SDK
-
-1. Download and install Android Studio from https://developer.android.com/studio
-2. On first launch, complete the **Setup Wizard** — it installs the Android SDK automatically.
-3. In Android Studio, go to:  
-   **File → Settings → Languages & Frameworks → Android SDK**  
-   Make sure **Android 14 (API 34)** is installed.
-4. Accept licenses by running in PowerShell:
-   ```powershell
-   flutter doctor --android-licenses
-   ```
-   Type `y` and press Enter for each prompt.
-
----
-
-## Step 6 — Install Flutter Plugin in Android Studio
-
-1. Open Android Studio
-2. Go to **File → Settings → Plugins**
-3. Search **Flutter** → Install → Restart Android Studio
-4. The **Dart** plugin installs automatically with Flutter.
-
----
-
-## Step 7 — Open the Project in Android Studio
-
-1. Open Android Studio
-2. Click **Open** (or File → Open)
-3. Navigate to:
-   ```
-   C:\Users\MF40127873\Desktop\MyTalamudipi\app
-   ```
-4. Click **OK** / **Trust Project**
-5. Android Studio will detect it as a Flutter project automatically.
-6. Wait for **Gradle sync** to finish (bottom status bar).
-
----
-
-## Step 8 — Download NotoSansTelugu Font
-
-The app needs the Telugu font files. Run this in PowerShell:
-
-```powershell
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi"
-New-Item -ItemType Directory -Force -Path app\assets\fonts
-
-# Download from Google Fonts GitHub
-Invoke-WebRequest `
-  -Uri "https://github.com/google/fonts/raw/main/ofl/notosanstelugu/NotoSansTelugu%5Bwdth%2Cwght%5D.ttf" `
-  -OutFile "app\assets\fonts\NotoSansTelugu-Regular.ttf" `
-  -UseBasicParsing
-
-Copy-Item "app\assets\fonts\NotoSansTelugu-Regular.ttf" `
-          "app\assets\fonts\NotoSansTelugu-Bold.ttf"
-```
-
-If the download fails, download manually from:  
-https://fonts.google.com/noto/specimen/Noto+Sans+Telugu  
-→ Click **Download family** → extract and copy both `NotoSansTelugu-Regular.ttf` and `NotoSansTelugu-Bold.ttf` to `app\assets\fonts\`.
-
----
-
-## Step 9 — Get Flutter Packages
-
-In PowerShell:
-
-```powershell
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi\app"
-flutter pub get
-```
-
-Or in Android Studio: open the **Terminal** tab at the bottom and run `flutter pub get`.
-
----
-
-## Step 10 — Build the APK
-
-### Option A — Build from PowerShell (Recommended)
-
-```powershell
-cd "C:\Users\MF40127873\Desktop\MyTalamudipi\app"
-flutter build apk --release
-```
-
-The APK will be at:
-```
-app\build\app\outputs\flutter-apk\app-release.apk
-```
-
-Copy it to a convenient location:
-```powershell
-Copy-Item "build\app\outputs\flutter-apk\app-release.apk" `
-          "C:\Users\MF40127873\Desktop\MyTalamudipi\MyTalamudipi.apk"
-```
-
----
-
-### Option B — Build from Android Studio
-
-1. In Android Studio, go to **Build → Flutter → Build APK**  
-   *(or Build → Build Bundle(s) / APK(s) → Build APK(s))*
-2. Wait for the build to complete (3–5 minutes first time)
-3. Click **locate** in the success notification, or find the APK at:
-   ```
-   app\build\app\outputs\flutter-apk\app-release.apk
-   ```
-
----
-
-## Step 11 — Install APK on Android Phone
-
-1. Transfer `MyTalamudipi.apk` to your phone via USB, WhatsApp, or Google Drive.
-2. On the phone, go to **Settings → Security** (or **Privacy**) → enable **Install unknown apps** for your file manager or browser.
-3. Open the APK file on the phone → tap **Install**.
-4. On first launch the app copies the database (takes a few seconds with a progress bar).
-
----
-
-## Running on a Connected Phone (for testing)
-
-1. On your Android phone, enable **Developer Options**:  
-   Settings → About Phone → tap **Build Number** 7 times.
-2. Go to Developer Options → enable **USB Debugging**.
-3. Connect phone via USB cable.
-4. In PowerShell:
-   ```powershell
-   flutter devices
-   ```
-   Your phone should appear in the list.
-5. Run the app directly on the phone:
-   ```powershell
-   cd "C:\Users\MF40127873\Desktop\MyTalamudipi\app"
-   flutter run
-   ```
-
----
-
-## Running in an Android Emulator (Android Studio)
-
-1. In Android Studio, go to **Device Manager** (right toolbar or Tools → Device Manager)
-2. Click **Create Device** → choose **Pixel 6** → Next
-3. Select a system image (e.g. **API 34, Android 14**) → Download if needed → Next → Finish
-4. Click the **Play** button next to the emulator to start it
-5. In Android Studio, select the emulator from the device dropdown and click **Run ▶**
-
----
-
-## Verifying Everything Works
-
-Run Flutter's diagnostic tool:
-
-```powershell
-flutter doctor
-```
-
-All items should show ✅. Common fixes:
-
-| Issue | Fix |
-|---|---|
-| `Android toolchain — no licenses` | Run `flutter doctor --android-licenses` |
-| `Android Studio not found` | Set `ANDROID_HOME` env variable |
-| `cmdline-tools component missing` | Android Studio → SDK Manager → SDK Tools → Android SDK Command-line Tools → Install |
-| `Visual Studio not installed` | Only needed for Windows desktop — ignore for Android builds |
-
----
-
-## Project File Structure
-
-```
-MyTalamudipi/
-├── README.md                          ← This file
-├── setup.ps1                          ← Automated setup script
-├── scripts/
-│   ├── extract_voters.py              ← PDF → SQLite extractor  ← RUN FIRST
-│   ├── check_cmap.py                  ← Debug Telugu encoding
-│   ├── check_pdfminer.py              ← Debug character codes
-│   └── check_pdfminer2.py             ← Debug raw text output
-└── app/                               ← Flutter Android project
-    ├── pubspec.yaml                   ← Dependencies
-    ├── assets/
-    │   ├── voters.db                  ← Generated by extract_voters.py
-    │   └── fonts/
-    │       ├── NotoSansTelugu-Regular.ttf
-    │       └── NotoSansTelugu-Bold.ttf
-    └── lib/
-        ├── main.dart                  ← App entry point
-        ├── models/voter.dart          ← Voter data model
-        ├── database/db_helper.dart    ← SQLite queries
-        ├── screens/
-        │   ├── home_screen.dart       ← Main menu
-        │   ├── search_screen.dart     ← Search UI (name/ID/house)
-        │   └── detail_screen.dart     ← Full voter record view
-        └── widgets/
-            └── voter_card.dart        ← List item card
-```
+## Step 6 — Install APK on Android Phone
+
+1. Transfer `app-release.apk` to your phone (USB, WhatsApp, Google Drive, etc.)
+2. On the phone: **Settings → Security → Install unknown apps** → allow your file manager
+3. Open the APK → tap **Install**
+4. On first launch a progress bar appears while the database loads (a few seconds)
 
 ---
 
 ## App Features
 
-| Search | Input | Result |
+| Search type | What you type | What it finds |
 |---|---|---|
-| **పేరు (Name)** | Telugu or English name | All voters with matching name |
-| **ఓటర్ ఐడి (Voter ID)** | EPIC number e.g. `TNN1234567` | Single unique voter record |
-| **ఇంటి నంబరు (House No)** | House number | Entire family at that house |
+| **పేరు — Name** | `reddy` or `రెడ్డి` | All voters whose name matches |
+| **సీరియల్ నంబరు — Serial No.** | `42` | Voter at that position in the printed list |
+| **ఓటర్ ఐడి — Voter ID (EPIC)** | `AP271850405225` | Single voter by EPIC number |
+| **ఇంటి నంబరు — House No.** | `1-5` | All family members at that house |
 
-- Bilingual interface — Telugu + English on every screen
-- Works fully **offline** — no internet required after install
-- Handles **2–5 lakh records** efficiently
-- First-launch progress bar while database loads
+- **English name search** works phonetically — `krishna`, `hussain`, `raju` all find the correct Telugu names
+- Fully **offline** after install — no internet required
+- Bilingual interface (Telugu + English on every screen)
+
+---
+
+## Project Structure
+
+```
+MyTalamudipi/
+├── README.md                            ← This file
+├── .github/workflows/build-apk.yml     ← GitHub Actions CI — builds the APK
+├── scripts/
+│   └── extract_voters.py               ← PDF → SQLite extractor (run this locally)
+└── app/                                ← Flutter Android project
+    ├── pubspec.yaml
+    ├── assets/
+    │   ├── voters.db                   ← Generated by extract_voters.py
+    │   ├── icon/app_icon.png           ← App launcher icon
+    │   └── fonts/
+    │       ├── NotoSansTelugu-Regular.ttf
+    │       └── NotoSansTelugu-Bold.ttf
+    └── lib/
+        ├── main.dart                   ← Splash / loading screen
+        ├── models/voter.dart           ← Voter data model
+        ├── database/db_helper.dart     ← SQLite search queries
+        ├── utils/transliterate.dart    ← English → phonetic search normalization
+        └── screens/
+            ├── home_screen.dart        ← Main menu
+            ├── search_screen.dart      ← Search UI
+            └── detail_screen.dart      ← Full voter record view
+```
 
 ---
 
 ## Troubleshooting
 
-**App shows blank / no results**  
-→ The `voters.db` file may be missing from `app\assets\`. Run `extract_voters.py` first.
-
-**Telugu text shows as boxes or question marks**  
-→ The font files are missing. Repeat Step 8.
-
-**Build fails: "Gradle sync failed"**  
-→ Check internet connection. In Android Studio: File → Sync Project with Gradle Files.
-
-**`flutter` command not found**  
-→ Add `C:\flutter\bin` to PATH and reopen PowerShell.
-
-**PDF extraction gives 0 records**  
-→ Run `python scripts\extract_voters.py --preview` and share the output to diagnose.
+| Problem | Fix |
+|---|---|
+| **0 records extracted** | Run with `--preview` to check decoded lines. Make sure the PDF is an AP electoral roll with Gautami font. |
+| **Telugu shows as boxes in terminal** | Terminal may not render Telugu. The DB is still correct — install the APK to verify. |
+| **GitHub Actions build fails** | Click the failed run → expand the failed step → read the error log. |
+| **APK installs but shows no results** | `voters.db` was not committed. Re-run extractor, then `git add app/assets/voters.db` and push. |
+| **App shows "Loading database…" forever** | `voters.db` may be corrupt. Delete it, re-run the extractor, and push again. |
