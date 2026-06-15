@@ -5,7 +5,7 @@ import '../models/voter.dart';
 import '../widgets/voter_card.dart';
 import 'detail_screen.dart';
 
-enum SearchType { bySerialNo, byVoterId, byHouseNumber }
+enum SearchType { byName, bySerialNo, byVoterId, byHouseNumber }
 
 class SearchScreen extends StatefulWidget {
   final SearchType searchType;
@@ -28,32 +28,37 @@ class _SearchScreenState extends State<SearchScreen> {
   // ── Metadata per search type ─────────────────────────────────────────────
 
   String get _titleTe => switch (widget.searchType) {
+        SearchType.byName => 'పేరు ద్వారా వెతకండి',
         SearchType.bySerialNo => 'సీరియల్ నంబరు ద్వారా',
         SearchType.byVoterId => 'ఓటర్ ఐడి ద్వారా',
         SearchType.byHouseNumber => 'ఇంటి నంబరు ద్వారా',
       };
 
   String get _titleEn => switch (widget.searchType) {
+        SearchType.byName => 'Search by Name',
         SearchType.bySerialNo => 'Search by Serial No.',
         SearchType.byVoterId => 'Search by Voter ID (EPIC)',
         SearchType.byHouseNumber => 'Search by House Number',
       };
 
   String get _hintTe => switch (widget.searchType) {
+        SearchType.byName => 'పేరు టైప్ చేయండి (తెలుగు లో)…',
         SearchType.bySerialNo => 'సీరియల్ నంబరు టైప్ చేయండి…',
         SearchType.byVoterId => 'EPIC నంబరు టైప్ చేయండి…',
         SearchType.byHouseNumber => 'ఇంటి నంబరు టైప్ చేయండి…',
       };
 
   String get _hintEn => switch (widget.searchType) {
+        SearchType.byName => 'e.g. రెడ్డి or రామి',
         SearchType.bySerialNo => 'e.g. 42',
         SearchType.byVoterId => 'e.g. AP271850405225',
         SearchType.byHouseNumber => 'e.g. 1-5',
       };
 
   Color get _accentColor => switch (widget.searchType) {
-        SearchType.bySerialNo => const Color(0xFF1565C0),
-        SearchType.byVoterId => const Color(0xFF6A1B9A),
+        SearchType.byName => const Color(0xFF2E7D32),
+        SearchType.bySerialNo => const Color(0xFF5D4037),
+        SearchType.byVoterId => const Color(0xFF1565C0),
         SearchType.byHouseNumber => const Color(0xFFBF360C),
       };
 
@@ -73,6 +78,8 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       List<Voter> results;
       switch (widget.searchType) {
+        case SearchType.byName:
+          results = await DbHelper.instance.searchByName(query);
         case SearchType.bySerialNo:
           results = await DbHelper.instance.searchBySerialNo(query);
         case SearchType.byVoterId:

@@ -65,7 +65,7 @@ class DbHelper {
     return rows.map(Voter.fromMap).toList();
   }
 
-  /// Returns voter(s) by serial number (exact or partial).
+  /// Returns voter(s) by serial number (exact).
   Future<List<Voter>> searchBySerialNo(String serialNo) async {
     final db = await database;
     final query = serialNo.trim();
@@ -75,6 +75,20 @@ class DbHelper {
       whereArgs: [query],
       orderBy: 'CAST(serial_no AS INTEGER)',
       limit: 50,
+    );
+    return rows.map(Voter.fromMap).toList();
+  }
+
+  /// Returns voters whose name contains [name] (Telugu partial match).
+  Future<List<Voter>> searchByName(String name) async {
+    final db = await database;
+    final pattern = '%${name.trim()}%';
+    final rows = await db.query(
+      'voters',
+      where: 'voter_name LIKE ?',
+      whereArgs: [pattern],
+      orderBy: 'voter_name',
+      limit: 100,
     );
     return rows.map(Voter.fromMap).toList();
   }

@@ -1,22 +1,26 @@
 ﻿"""
 Extract voter data from Telugu electoral roll PDFs (AP / Telangana).
-Uses PyMuPDF (fitz) instead of pdfminer -- handles custom font encodings better.
+Uses PyMuPDF (fitz) with font-aware GSUB decoding to recover proper Telugu text.
 
 Each voter record in the PDF is laid out as 8 consecutive text lines per page:
-    Line 1 : serial_no       (integer)
-    Line 2 : house_number    (e.g. 1-1, 1-2A)
-    Line 3 : voter_name      (Telugu -- may appear garbled due to font encoding)
-    Line 4 : relationship_type
-    Line 5 : relationship_name
-    Line 6 : gender
-    Line 7 : age             (integer)
-    Line 8 : voter_id        (EPIC -- e.g. AP271850405225)
+    Line 1 : serial_no       (integer, Helvetica font)
+    Line 2 : house_number    (e.g. 1-1, 1-2A, Helvetica font)
+    Line 3 : voter_name      (Telugu text, Gautami font)
+    Line 4 : relationship_type (Telugu, Gautami font)
+    Line 5 : relationship_name (Telugu, Gautami font)
+    Line 6 : gender          (Telugu, Gautami font)
+    Line 7 : age             (integer, Helvetica font)
+    Line 8 : voter_id        (EPIC e.g. AP271850405225, Helvetica font)
+
+Decoding strategy:
+  - Helvetica / Times-Roman spans → standard ASCII (no conversion needed)
+  - Gautami (Telugu) spans → glyph_id → Telugu Unicode via GSUB reverse lookup
 
 Usage:
     # Single PDF
     python extract_voters.py --pdf path/to/file.pdf
 
-    # Folder of PDFs (e.g. 100 parts of Nandikotkur)
+    # Folder of PDFs
     python extract_voters.py --pdf-dir path/to/pdfs_folder/
 
     # Preview raw lines (check encoding / structure)
@@ -27,6 +31,7 @@ import re
 import sys
 import sqlite3
 import argparse
+import io
 from pathlib import Path
 
 try:
@@ -34,6 +39,12 @@ try:
 except ImportError:
     print("ERROR: PyMuPDF not installed. Run:  pip install pymupdf")
     sys.exit(1)
+
+try:
+    from fontTools.ttLib import TTFont
+    _FONTTOOLS_OK = True
+except ImportError:
+    _FONTTOOLS_OK = False
 
 # -- Config -------------------------------------------------------------------
 PDF_PATH = r'C:\Users\MF40127873\Downloads\S01_185_140.pdf'
@@ -45,28 +56,162 @@ VOTER_ID_RE  = re.compile(r'^[A-Z]{2,3}\d{6,14}$')
 # House number: digit(s) then hyphen then digits/letters  e.g. 1-1, 12-3A
 HOUSE_NO_RE  = re.compile(r'^\d+[-/]\d*[A-Za-z]?\d*$')
 
-# Gender normalization — PyMuPDF maps Telugu glyphs to these garbled chars
-# Determined by inspecting actual DB values (hex codepoints)
-_GENDER_MALE_CHAR   = '\u0057\u00ad'   # W + soft-hyphen  → Male
-_GENDER_FEMALE_CHAR = '\u013d\u0068\u0160\u016c'  # ŁhŠŬ → Female
+
+# -- GSUB-based Telugu font decoder -------------------------------------------
+
+def _build_gsub_map(tt: 'TTFont') -> dict:
+    """Return {glyph_index: unicode_string} using GSUB reverse lookup."""
+    reverse_sub = {}
+    if 'GSUB' in tt:
+        for record in tt['GSUB'].table.LookupList.Lookup:
+            for sub in record.SubTable:
+                if hasattr(sub, 'ligatures'):
+                    for fg, lig_list in sub.ligatures.items():
+                        for lig in lig_list:
+                            reverse_sub[lig.LigGlyph] = [fg] + list(lig.Component)
+                elif hasattr(sub, 'mapping'):
+                    for inp, out in sub.mapping.items():
+                        reverse_sub[out] = [inp]
+
+    cmap = tt.getBestCmap()
+    glyph_order = tt.getGlyphOrder()
+    gname_to_uni = {g: u for u, g in cmap.items()}
+
+    def g2u(gname, depth=0):
+        if depth > 6:
+            return ''
+        if gname in gname_to_uni:
+            return chr(gname_to_uni[gname])
+        if gname in reverse_sub:
+            return ''.join(g2u(g, depth + 1) for g in reverse_sub[gname])
+        return ''
+
+    return {i: g2u(gname) for i, gname in enumerate(glyph_order)}
+
+
+class _PdfDecoder:
+    """
+    Holds per-document font decode maps.
+    Gautami glyphs → proper Telugu Unicode via GSUB reverse lookup.
+    Call decode_page(page) to get a list of (font_is_telugu, decoded_line_text).
+    """
+
+    def __init__(self, doc: 'fitz.Document'):
+        # xref -> {glyph_id: unicode_str}
+        self._maps: dict[int, dict] = {}
+        # basefont_name -> xref  (built lazily per page)
+        self._name_to_xref: dict[str, int] = {}
+        self._doc = doc
+        # Pre-scan all xrefs for Gautami fonts
+        self._prescan()
+
+    def _prescan(self):
+        """Find all Gautami font xrefs in the document."""
+        for page in self._doc:
+            for f in page.get_fonts(full=True):
+                xref, _ext, _ftype, basefont, _alias, _enc, *_ = f
+                if 'Gautami' in basefont and basefont not in self._name_to_xref:
+                    self._name_to_xref[basefont] = xref
+
+    def _get_map(self, xref: int) -> dict | None:
+        if xref in self._maps:
+            return self._maps[xref]
+        if not _FONTTOOLS_OK:
+            return None
+        try:
+            font_data = self._doc.extract_font(xref)
+            fbytes = font_data[3]
+            if not fbytes:
+                return None
+            tt = TTFont(io.BytesIO(fbytes))
+            m = _build_gsub_map(tt)
+            self._maps[xref] = m
+            return m
+        except Exception:
+            return None
+
+    def decode_page(self, page: 'fitz.Page') -> list[str]:
+        """Return list of decoded text lines (non-empty) from the page."""
+        # Build font name -> xref for this page
+        page_font_map: dict[str, int] = {}
+        for f in page.get_fonts(full=True):
+            xref, _ext, _ftype, basefont, _alias, _enc, *_ = f
+            page_font_map[basefont] = xref
+            # Also map partial matches (span font name may omit style)
+            short = basefont.split('+')[-1]  # strip subset prefix like ABCDEE+
+            page_font_map[short] = xref
+
+        d = page.get_text('rawdict')
+        lines: list[str] = []
+
+        for block in d['blocks']:
+            if block['type'] != 0:
+                continue
+            for line in block['lines']:
+                text = ''
+                for span in line['spans']:
+                    font_name = span.get('font', '')
+                    is_telugu = 'Gautami' in font_name
+
+                    if is_telugu:
+                        # Find xref: try full name, then partial
+                        xref = page_font_map.get(font_name)
+                        if xref is None:
+                            for k, v in page_font_map.items():
+                                if 'Gautami' in k:
+                                    is_bold = 'Bold' in font_name
+                                    if is_bold == ('Bold' in k):
+                                        xref = v
+                                        break
+                        gmap = self._get_map(xref) if xref else None
+                        for ch in span['chars']:
+                            code = ord(ch['c']) if isinstance(ch['c'], str) else ch['c']
+                            text += gmap.get(code, '') if gmap else chr(code)
+                    else:
+                        for ch in span['chars']:
+                            text += ch['c'] if isinstance(ch['c'], str) else chr(ch['c'])
+
+                stripped = text.strip().replace('\xa0', ' ').strip()
+                if stripped:
+                    lines.append(stripped)
+
+        return lines
+
+
+# -- Telugu text normalisation ------------------------------------------------
 
 def _normalise_gender(raw: str) -> str:
-    raw = raw.strip()
-    if raw == _GENDER_MALE_CHAR or raw.startswith('W'):
+    """Map decoded Telugu gender text to Male / Female."""
+    r = raw.strip()
+    # After GSUB decoding:
+    #   'పు' (పురుషుడు abbrev) = Male
+    #   'సీ్త' / 'స్త్రీ' (sthri) = Female
+    if r.startswith('పు'):
         return 'Male'
-    if raw == _GENDER_FEMALE_CHAR or '\u013d' in raw or '\u0160' in raw:
+    if r.startswith('సీ') or r.startswith('స్త') or 'స్త్రీ' in r:
         return 'Female'
-    return raw  # fallback: keep as-is
+    # Fallback: old garbled form detection
+    if r.startswith('W'):
+        return 'Male'
+    if '\u013d' in r or '\u0160' in r:
+        return 'Female'
+    return r  # keep as-is if unknown
 
-# Rel_type normalization — same font encoding issue
-_REL_MAP = {
-    'R3': 'Father',
-    'R':  'Father',
-    'Z':  'Husband',
-}
 
 def _normalise_rel_type(raw: str) -> str:
-    return _REL_MAP.get(raw.strip(), raw.strip())
+    """Map decoded Telugu relationship type to Father / Husband."""
+    r = raw.strip()
+    # After GSUB decoding: 'తం' = తండ్రి (Father), 'భ' or 'భర్త' = Husband
+    if r.startswith('తం') or r == 'తం':
+        return 'Father'
+    if r.startswith('భ') or r.startswith('Z'):
+        return 'Husband'
+    # Fallback: old garbled form
+    if r in ('R3', 'R'):
+        return 'Father'
+    if r == 'Z':
+        return 'Husband'
+    return r
 
 
 # -- Part name from filename --------------------------------------------------
@@ -131,57 +276,39 @@ def _insert_batch(conn: sqlite3.Connection, records: list):
     conn.commit()
 
 
-# -- PDF extraction -----------------------------------------------------------
-
-def _clean_lines(raw_text: str) -> list:
-    return [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-
+# -- Helper predicates --------------------------------------------------------
 
 def _is_serial(token: str) -> bool:
     return token.isdigit()
 
-
 def _is_age(token: str) -> bool:
     return token.isdigit() and 1 <= int(token) <= 120
 
-
 def _is_voter_id(token: str) -> bool:
     return bool(VOTER_ID_RE.match(token.upper()))
-
 
 def _is_house_no(token: str) -> bool:
     return bool(HOUSE_NO_RE.match(token))
 
 
+# -- PDF extraction -----------------------------------------------------------
+
 def extract_from_pdf(pdf_path: str, part_name: str = '',
                      preview: bool = False, max_pages: int = 0) -> list:
-    """
-    Extract voter records from a single PDF.
-
-    Strategy
-    --------
-    Each page text is split into lines. We scan for an 8-line window where:
-        window[0]  = serial_no     (digits only)
-        window[1]  = house_number  (matches HOUSE_NO_RE)
-        window[2]  = voter_name
-        window[3]  = relationship_type
-        window[4]  = relationship_name
-        window[5]  = gender
-        window[6]  = age           (1-120 digits)
-        window[7]  = voter_id      (matches VOTER_ID_RE)
-    On match, record it and advance 8 lines; otherwise shift by 1.
-    """
     doc = fitz.open(pdf_path)
     total_pages = min(len(doc), max_pages) if max_pages else len(doc)
 
-    all_lines = []
+    decoder = _PdfDecoder(doc)
+    all_lines: list[str] = []
+
     for page_num in range(total_pages):
         page = doc[page_num]
-        all_lines.extend(_clean_lines(page.get_text("text")))
+        all_lines.extend(decoder.decode_page(page))
+
     doc.close()
 
     if preview:
-        print(f"\n-- RAW LINES from {Path(pdf_path).name} (first 120) --")
+        print(f"\n-- DECODED LINES from {Path(pdf_path).name} (first 120) --")
         enc = sys.stdout.encoding or 'utf-8'
         for idx, ln in enumerate(all_lines[:120]):
             safe = ln.encode(enc, errors='replace').decode(enc, errors='replace')

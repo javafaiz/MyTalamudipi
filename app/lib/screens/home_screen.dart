@@ -66,6 +66,17 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          const SizedBox(height: 14),
+          _SearchCard(
+            icon: Icons.search_rounded,
+            villageIcon: Icons.grass,
+            titleTe: 'పేరు ద్వారా వెతకండి',
+            titleEn: 'Search by Name',
+            subtitleEn: 'Type Telugu name — e.g. రెడ్డి or రావు',
+            color: const Color(0xFF2E7D32),
+            onTap: () => _navigate(context, SearchType.byName),
+          ),
+          const SizedBox(height: 12),
           _SearchCard(
             icon: Icons.format_list_numbered_rounded,
             villageIcon: Icons.agriculture,
