@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Icon(Icons.how_to_vote_rounded, size: 68, color: Colors.white),
           const SizedBox(height: 12),
           const Text(
-            'MY Talamudipi',
+            'Mana Talamudipi',
             style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.bold,
@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Text(
-        'MY Talamudipi v1.0  •  మీ తలముడిపి',
+        'Mana Talamudipi v1.0  •  మన తలముడిపి',
         style: TextStyle(fontSize: 11, color: Colors.grey[400]),
       ),
     );

@@ -18,7 +18,7 @@ class MyTalamudipiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MY Talamudipi',
+      title: 'Mana Talamudipi',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
@@ -86,7 +86,7 @@ class _SplashLoaderState extends State<_SplashLoader> {
             const Icon(Icons.how_to_vote_rounded, size: 80, color: Colors.white),
             const SizedBox(height: 20),
             const Text(
-              'MY Talamudipi',
+              'Mana Talamudipi',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
