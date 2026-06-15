@@ -56,6 +56,36 @@ VOTER_ID_RE  = re.compile(r'^[A-Z]{2,3}\d{6,14}$')
 # House number: digit(s) then hyphen then digits/letters  e.g. 1-1, 12-3A
 HOUSE_NO_RE  = re.compile(r'^\d+[-/]\d*[A-Za-z]?\d*$')
 
+# Telugu vowel sign immediately before virama + consonant — needs reordering.
+# Pattern: <vowel_sign> + ్(virama) + <consonant>  →  ్ + <consonant> + <vowel_sign>
+# e.g.  డి్డ → డ్డి (Reddy),  సే్సన్ → స్సేన్ (Hussein),  రు్ల → ర్లు
+_TELUGU_VOWEL_BEFORE_VIRAMA = re.compile(
+    r'([\u0C3E-\u0C44\u0C46\u0C47\u0C4A\u0C4B\u0C4C])'  # Telugu vowel sign (not virama)
+    r'(\u0C4D)'                                            # virama ్
+    r'([\u0C15-\u0C39\u0C3D\u0C58-\u0C5A])'              # Telugu consonant
+)
+
+def _fix_telugu_order(text: str) -> str:
+    """
+    Correct character ordering artifact from GSUB glyph decomposition.
+
+    In PDF glyph streams, vowel signs (matras) sometimes appear before the
+    virama+consonant cluster they visually modify, but Unicode logical order
+    requires them AFTER the full conjunct consonant.
+
+    Applies the fix repeatedly until stable (handles nested clusters):
+      రెడి్డ  →  రెడ్డి    (Reddy)
+      హుసే్సన్ →  హుస్సేన్  (Hussein)
+      షబీ్బర్  →  షబ్బీర్   (Shabbir)
+      రు్ల    →  ర్లు      (final -rlu)
+    """
+    while True:
+        fixed = _TELUGU_VOWEL_BEFORE_VIRAMA.sub(r'\2\3\1', text)
+        if fixed == text:
+            break
+        text = fixed
+    return text
+
 
 # -- GSUB-based Telugu font decoder -------------------------------------------
 
@@ -324,9 +354,9 @@ def extract_from_pdf(pdf_path: str, part_name: str = '',
             records.append({
                 'serial_no':         w[0],
                 'house_number':      w[1],
-                'voter_name':        w[2],
+                'voter_name':        _fix_telugu_order(w[2]),
                 'relationship_type': _normalise_rel_type(w[3]),
-                'relationship_name': w[4],
+                'relationship_name': _fix_telugu_order(w[4]),
                 'gender':            _normalise_gender(w[5]),
                 'age':               int(w[6]),
                 'voter_id':          w[7].upper(),
