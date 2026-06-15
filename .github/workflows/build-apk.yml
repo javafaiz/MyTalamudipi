@@ -116,6 +116,18 @@ jobs:
           sed -i 's/android:label="my_talamudipi"/android:label="My Talamudipi"/' \
             /tmp/flutter_app/android/app/src/main/AndroidManifest.xml
 
+          # Add app description (shown in Android Settings → App Info)
+          # First, add the string resource to strings.xml
+          STRINGS_XML=/tmp/flutter_app/android/app/src/main/res/values/strings.xml
+          if grep -q 'app_description' "$STRINGS_XML" 2>/dev/null; then
+            sed -i 's|<string name="app_description">.*</string>|<string name="app_description">మన తలముడిపి గ్రామ ఓటర్ల సమాచారం • Search village voter records by name, house number or EPIC ID</string>|' "$STRINGS_XML"
+          else
+            sed -i 's|</resources>|    <string name="app_description">మన తలముడిపి గ్రామ ఓటర్ల సమాచారం • Search village voter records by name, house number or EPIC ID</string>\n</resources>|' "$STRINGS_XML"
+          fi
+          # Wire the description attribute into the <application> tag
+          sed -i 's|android:label="My Talamudipi"|android:label="My Talamudipi"\n        android:description="@string/app_description"|' \
+            /tmp/flutter_app/android/app/src/main/AndroidManifest.xml
+
           echo "Scaffold created at /tmp/flutter_app"
           ls /tmp/flutter_app/
 
