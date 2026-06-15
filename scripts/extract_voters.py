@@ -87,6 +87,34 @@ def _fix_telugu_order(text: str) -> str:
     return text
 
 
+# Virama (్) immediately before a vowel sign — artifact left after ◌ removal.
+# e.g.  డ్ి  →  డి   (the virama's target consonant was a dotted-circle placeholder)
+_ORPHAN_VIRAMA_RE = re.compile(
+    r'\u0C4D'                                # virama ్
+    r'([\u0C3E-\u0C44\u0C46\u0C47\u0C4A\u0C4B\u0C4C])'  # vowel sign
+)
+
+_DOTTED_CIRCLE = '\u25CC'  # ◌  — Unicode placeholder for combining chars without a base
+
+def _clean_name(text: str) -> str:
+    """
+    Remove PDF rendering artifacts from a decoded Telugu name:
+      ◌  (U+25CC) — dotted circle placeholder, always an artifact
+      orphan virama before vowel sign — left after ◌ removal
+      ?  — appears when a glyph had no decode mapping
+    """
+    # 1. Remove dotted circle
+    text = text.replace(_DOTTED_CIRCLE, '')
+    # 2. Remove orphan virama (్ directly followed by a vowel sign)
+    #    e.g. రెడడ్ి → రెడడి  (reads "Reddi", correct alternate spelling)
+    text = _ORPHAN_VIRAMA_RE.sub(r'\1', text)
+    # 3. Remove stray question marks (glyph decode failure marker)
+    text = re.sub(r'\?+', '', text)
+    # 4. Collapse multiple spaces
+    text = re.sub(r'  +', ' ', text).strip()
+    return text
+
+
 # -- Telugu → phonetic Roman conversion  -------------------------------------
 # Used to build a searchable ASCII column so users can type English names.
 
@@ -462,13 +490,14 @@ def extract_from_pdf(pdf_path: str, part_name: str = '',
         w = all_lines[i: i + 8]
         if (_is_serial(w[0]) and _is_house_no(w[1])
                 and _is_age(w[6]) and _is_voter_id(w[7])):
-            vname = _fix_telugu_order(w[2])
+            vname = _clean_name(_fix_telugu_order(w[2]))
+            rname = _clean_name(_fix_telugu_order(w[4]))
             records.append({
                 'serial_no':         w[0],
                 'house_number':      w[1],
                 'voter_name':        vname,
                 'relationship_type': _normalise_rel_type(w[3]),
-                'relationship_name': _fix_telugu_order(w[4]),
+                'relationship_name': rname,
                 'gender':            _normalise_gender(w[5]),
                 'age':               int(w[6]),
                 'voter_id':          w[7].upper(),

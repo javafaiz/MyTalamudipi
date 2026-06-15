@@ -56,10 +56,10 @@ class _SearchScreenState extends State<SearchScreen> {
       };
 
   Color get _accentColor => switch (widget.searchType) {
-        SearchType.byName => const Color(0xFF2E7D32),
-        SearchType.bySerialNo => const Color(0xFF5D4037),
-        SearchType.byVoterId => const Color(0xFF1565C0),
-        SearchType.byHouseNumber => const Color(0xFFBF360C),
+        SearchType.byName       => const Color(0xFF1B7A2F),
+        SearchType.bySerialNo   => const Color(0xFF7B3F00),
+        SearchType.byVoterId    => const Color(0xFF0B4F9E),
+        SearchType.byHouseNumber => const Color(0xFF006064),
       };
 
   // ── Search logic ─────────────────────────────────────────────────────────

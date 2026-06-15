@@ -21,7 +21,7 @@ class MyTalamudipiApp extends StatelessWidget {
       title: 'Mana Talamudipi',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D1B2A)),
         fontFamily: 'NotoSansTelugu',
         useMaterial3: true,
         cardTheme: CardThemeData(
@@ -78,7 +78,7 @@ class _SplashLoaderState extends State<_SplashLoader> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B5E20),
+      backgroundColor: const Color(0xFF0D1B2A),
       body: SafeArea(
         child: Center(
           child: Column(
@@ -88,13 +88,13 @@ class _SplashLoaderState extends State<_SplashLoader> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.park,        size: 30, color: Colors.white.withOpacity(0.3)),
+                  Icon(Icons.park,        size: 30, color: const Color(0xFFF5A623).withOpacity(0.35)),
                   const SizedBox(width: 12),
-                  Icon(Icons.cottage,     size: 30, color: Colors.white.withOpacity(0.3)),
+                  Icon(Icons.cottage,     size: 30, color: const Color(0xFFF5A623).withOpacity(0.35)),
                   const SizedBox(width: 12),
-                  Icon(Icons.agriculture, size: 30, color: Colors.white.withOpacity(0.3)),
+                  Icon(Icons.agriculture, size: 30, color: const Color(0xFFF5A623).withOpacity(0.35)),
                   const SizedBox(width: 12),
-                  Icon(Icons.park,        size: 30, color: Colors.white.withOpacity(0.3)),
+                  Icon(Icons.park,        size: 30, color: const Color(0xFFF5A623).withOpacity(0.35)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -102,24 +102,24 @@ class _SplashLoaderState extends State<_SplashLoader> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+                  color: const Color(0xFFF5A623).withOpacity(0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.30),
+                    color: const Color(0xFFF5A623).withOpacity(0.60),
                     width: 2,
                   ),
                 ),
                 child: const Icon(
                   Icons.how_to_vote_rounded,
                   size: 70,
-                  color: Colors.white,
+                  color: Color(0xFFF5A623),
                 ),
               ),
               const SizedBox(height: 22),
               const Text(
-                'Talamudipi SIR Information',
+                'Talamudipi SIR Info',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 0.8,
@@ -130,7 +130,7 @@ class _SplashLoaderState extends State<_SplashLoader> {
                 'తలముడిపి S.I.R. ఓటర్ల జాబితా',
                 style: TextStyle(
                   fontSize: 17,
-                  color: Colors.white.withOpacity(0.88),
+                  color: Colors.white.withOpacity(0.90),
                   fontFamily: 'NotoSansTelugu',
                 ),
               ),
@@ -139,7 +139,7 @@ class _SplashLoaderState extends State<_SplashLoader> {
                 '2002 ఆధారంగా  •  Based on 2002 SIR',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.65),
+                  color: const Color(0xFFF5A623).withOpacity(0.80),
                   fontFamily: 'NotoSansTelugu',
                 ),
               ),
@@ -149,7 +149,7 @@ class _SplashLoaderState extends State<_SplashLoader> {
                 child: LinearProgressIndicator(
                   value: _progress == 0 ? null : _progress,
                   backgroundColor: Colors.white24,
-                  color: Colors.white,
+                  color: const Color(0xFFF5A623),
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(4),
                 ),

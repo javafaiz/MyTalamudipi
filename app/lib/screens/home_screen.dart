@@ -3,17 +3,30 @@ import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import 'search_screen.dart';
 
-// ── Village colour palette ────────────────────────────────────────────────────
+// ── Outdoor-readable colour palette ─────────────────────────────────────────
+// Deep navy header + amber/gold accents: high contrast in bright sunlight.
 class _V {
-  static const forestGreen  = Color(0xFF1B5E20);
-  static const leafGreen    = Color(0xFF2E7D32);
-  static const midGreen     = Color(0xFF388E3C);
-  static const lightGreenBg = Color(0xFFE8F5E9);
-  static const creamBg      = Color(0xFFF1F8E9);
-  static const earthBrown   = Color(0xFF5D4037);
-  static const skyBlue      = Color(0xFF1565C0);
-  static const terracotta   = Color(0xFFBF360C);
-  static const golden       = Color(0xFFF9A825);
+  static const navy        = Color(0xFF0D1B2A);  // header bg
+  static const navyMid     = Color(0xFF1A2E42);  // gradient mid
+  static const navyLight   = Color(0xFF1E3A52);  // gradient end
+  static const amber       = Color(0xFFF5A623);  // primary accent
+  static const amberDark   = Color(0xFFD4891A);  // pressed / border
+  static const pageBg      = Color(0xFFFAFAF7);  // warm off-white page
+  static const cardBg      = Color(0xFFFFFFFF);
+  static const nameGreen   = Color(0xFF1B7A2F);  // name search card
+  static const serialBrown = Color(0xFF7B3F00);  // serial search card
+  static const epicBlue    = Color(0xFF0B4F9E);  // EPIC search card
+  static const houseTeal   = Color(0xFF006064);  // house search card
+  // keep for detail screen compatibility
+  static const forestGreen = Color(0xFF0D1B2A);
+  static const leafGreen   = Color(0xFF1B7A2F);
+  static const midGreen    = Color(0xFF1E3A52);
+  static const lightGreenBg = Color(0xFFFAFAF7);
+  static const creamBg     = Color(0xFFFAFAF7);
+  static const earthBrown  = Color(0xFF7B3F00);
+  static const skyBlue     = Color(0xFF0B4F9E);
+  static const terracotta  = Color(0xFF006064);
+  static const golden      = Color(0xFFF5A623);
 }
 
 class HomeScreen extends StatelessWidget {
@@ -22,7 +35,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _V.creamBg,
+      backgroundColor: _V.pageBg,
       body: SafeArea(
         child: Column(
           children: [
@@ -52,14 +65,14 @@ class HomeScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.travel_explore, size: 15, color: _V.leafGreen),
+              const Icon(Icons.travel_explore, size: 15, color: _V.amber),
               const SizedBox(width: 6),
               Text(
                 'వెతకండి  |  Search',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Colors.grey[700],
+                  color: Colors.grey[800],
                   fontFamily: 'NotoSansTelugu',
                 ),
               ),
@@ -72,8 +85,8 @@ class HomeScreen extends StatelessWidget {
             villageIcon: Icons.grass,
             titleTe: 'పేరు ద్వారా వెతకండి',
             titleEn: 'Search by Name',
-            subtitleEn: 'Type Telugu name — e.g. రెడ్డి or రావు',
-            color: const Color(0xFF2E7D32),
+            subtitleEn: 'Telugu or English — e.g. reddy, రెడ్డి',
+            color: _V.nameGreen,
             onTap: () => _navigate(context, SearchType.byName),
           ),
           const SizedBox(height: 12),
@@ -83,7 +96,7 @@ class HomeScreen extends StatelessWidget {
             titleTe: 'సీరియల్ నంబరు ద్వారా',
             titleEn: 'Search by Serial No.',
             subtitleEn: 'Find voter by number in the printed list',
-            color: _V.earthBrown,
+            color: _V.serialBrown,
             onTap: () => _navigate(context, SearchType.bySerialNo),
           ),
           const SizedBox(height: 12),
@@ -93,7 +106,7 @@ class HomeScreen extends StatelessWidget {
             titleTe: 'ఓటర్ ఐడి ద్వారా (EPIC)',
             titleEn: 'Search by Voter ID',
             subtitleEn: 'Enter your EPIC number to find details',
-            color: _V.skyBlue,
+            color: _V.epicBlue,
             onTap: () => _navigate(context, SearchType.byVoterId),
           ),
           const SizedBox(height: 12),
@@ -103,7 +116,7 @@ class HomeScreen extends StatelessWidget {
             titleTe: 'ఇంటి నంబరు ద్వారా',
             titleEn: 'Search by House Number',
             subtitleEn: 'See all family members at that house',
-            color: _V.terracotta,
+            color: _V.houseTeal,
             onTap: () => _navigate(context, SearchType.byHouseNumber),
           ),
         ],
@@ -141,7 +154,7 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Talamudipi SIR Information  •  2002 SIR  •  v1.0',
+            'Talamudipi SIR Info  •  2002 SIR  •  v1.0',
             style: TextStyle(fontSize: 9, color: Colors.grey[400], fontFamily: 'NotoSansTelugu'),
           ),
         ],
@@ -166,7 +179,7 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Talamudipi SIR Information',
+              'Talamudipi SIR Info',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 4),
@@ -237,7 +250,7 @@ class _VillageHeader extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF558B2F)],
+          colors: [Color(0xFF0D1B2A), Color(0xFF1A2E42), Color(0xFF1E3A52)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -253,19 +266,19 @@ class _VillageHeader extends StatelessWidget {
             top: 10, right: 14,
             child: Row(
               children: [
-                Icon(Icons.park, color: Color(0x30FFFFFF), size: 44),
+                Icon(Icons.how_to_vote_rounded, color: Color(0x30F5A623), size: 44),
                 SizedBox(width: 2),
-                Icon(Icons.park, color: Color(0x20FFFFFF), size: 30),
+                Icon(Icons.how_to_vote_rounded, color: Color(0x18F5A623), size: 30),
               ],
             ),
           ),
           const Positioned(
             bottom: 14, left: 14,
-            child: Icon(Icons.cottage, color: Color(0x25FFFFFF), size: 40),
+            child: Icon(Icons.cottage, color: Color(0x20F5A623), size: 40),
           ),
           const Positioned(
             bottom: 8, right: 60,
-            child: Icon(Icons.grass, color: Color(0x20FFFFFF), size: 28),
+            child: Icon(Icons.grass, color: Color(0x18F5A623), size: 28),
           ),
           // Main content
           Padding(
@@ -275,15 +288,15 @@ class _VillageHeader extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.30), width: 1.5),
-                  ),
-                  child: const Icon(Icons.how_to_vote_rounded, size: 40, color: Colors.white),
+                  color: Colors.white.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFF5A623).withOpacity(0.60), width: 1.5),
+                ),
+                child: const Icon(Icons.how_to_vote_rounded, size: 40, color: Color(0xFFF5A623)),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Talamudipi SIR Information',
+                  'Talamudipi SIR Info',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -305,7 +318,7 @@ class _VillageHeader extends StatelessWidget {
                   '2002 ఆధారంగా  •  Based on 2002 SIR',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.white.withOpacity(0.65),
+                    color: const Color(0xFFF5A623).withOpacity(0.85),
                     fontFamily: 'NotoSansTelugu',
                   ),
                 ),
@@ -320,9 +333,9 @@ class _VillageHeader extends StatelessWidget {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.18),
+                        color: const Color(0xFFF5A623).withOpacity(0.18),
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: Colors.white.withOpacity(0.28), width: 1),
+                        border: Border.all(color: const Color(0xFFF5A623).withOpacity(0.55), width: 1),
                       ),
                       child: Text(
                         label,

@@ -4,12 +4,13 @@ import 'package:flutter/services.dart';
 import '../models/voter.dart';
 import 'search_screen.dart';
 
-// Village colour palette (same as home_screen)
-const _kForestGreen  = Color(0xFF1B5E20);
-const _kLeafGreen    = Color(0xFF2E7D32);
-const _kMidGreen     = Color(0xFF388E3C);
-const _kCreamBg      = Color(0xFFF1F8E9);
-const _kLightGreenBg = Color(0xFFE8F5E9);
+// Outdoor-readable colour palette
+const _kForestGreen  = Color(0xFF0D1B2A);
+const _kLeafGreen    = Color(0xFF1B7A2F);
+const _kMidGreen     = Color(0xFF1A2E42);
+const _kCreamBg      = Color(0xFFFAFAF7);
+const _kLightGreenBg = Color(0xFFFAFAF7);
+const _kAmber        = Color(0xFFF5A623);
 
 class DetailScreen extends StatelessWidget {
   final Voter voter;
@@ -293,8 +294,8 @@ class DetailScreen extends StatelessWidget {
                   _divider(),
                   _InfoRow(
                     icon: Icons.article_outlined,
-                    labelTe: 'పార్ట్ నంబరు',
-                    labelEn: 'Part No.',
+                    labelTe: 'భాగం',
+                    labelEn: 'భాగం',
                     value: voter.partName,
                     iconColor: _kLeafGreen,
                   ),
