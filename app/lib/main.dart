@@ -117,20 +117,29 @@ class _SplashLoaderState extends State<_SplashLoader> {
               ),
               const SizedBox(height: 22),
               const Text(
-                'Mana Talamudipi',
+                'Talamudipi SIR Information',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  letterSpacing: 1.2,
+                  letterSpacing: 0.8,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'మన తలముడిపి',
+                'తలముడిపి S.I.R. ఓటర్ల జాబితా',
                 style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.white.withOpacity(0.82),
+                  fontSize: 17,
+                  color: Colors.white.withOpacity(0.88),
+                  fontFamily: 'NotoSansTelugu',
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '2002 ఆధారంగా  •  Based on 2002 SIR',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.65),
                   fontFamily: 'NotoSansTelugu',
                 ),
               ),

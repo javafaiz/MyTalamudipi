@@ -141,8 +141,8 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Mana Talamudipi v1.0',
-            style: TextStyle(fontSize: 9, color: Colors.grey[400]),
+            'Talamudipi SIR Information  •  2002 SIR  •  v1.0',
+            style: TextStyle(fontSize: 9, color: Colors.grey[400], fontFamily: 'NotoSansTelugu'),
           ),
         ],
       ),
@@ -166,17 +166,17 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'This app is NOT an official government service.',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              'Talamudipi SIR Information',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
-              'It is a free community helper tool to quickly check voter details in English and Telugu.',
+              'Voter records based on the 2002 Special Intensive Revision (SIR) for Talamudipi village.',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
-            const SizedBox(height: 14),
+            const Divider(height: 20),
             const Text(
-              'ఈ యాప్ ప్రభుత్వ అధికారిక సేవ కాదు.',
+              'తలముడిపి S.I.R. ఓటర్ల జాబితా — 2002',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -185,11 +185,28 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'ఓటరు వివరాలు తెలుగు మరియు ఇంగ్లీషులో త్వరగా చూసుకోవడానికి ఇది ఒక ఉచిత సమాజ సహాయ సాధనం.',
+              '2002 నాటి ప్రత్యేక సమీక్ష (SIR) ఆధారంగా తలముడిపి గ్రామ ఓటర్ల జాబితా.',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[700],
                 fontFamily: 'NotoSansTelugu',
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Color(0xFFFFCC02), width: 1),
+              ),
+              child: Text(
+                'ఈ యాప్ ప్రభుత్వ అధికారిక సేవ కాదు — This app is NOT an official government service.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[800],
+                  fontFamily: 'NotoSansTelugu',
+                ),
               ),
             ),
           ],
@@ -266,20 +283,29 @@ class _VillageHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Mana Talamudipi',
+                  'Talamudipi SIR Information',
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0.6,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'మన తలముడిపి',
+                  'తలముడిపి S.I.R. ఓటర్ల జాబితా',
                   style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.white.withOpacity(0.88),
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.90),
+                    fontFamily: 'NotoSansTelugu',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '2002 ఆధారంగా  •  Based on 2002 SIR',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withOpacity(0.65),
                     fontFamily: 'NotoSansTelugu',
                   ),
                 ),
