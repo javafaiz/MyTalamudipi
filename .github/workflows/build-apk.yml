@@ -97,41 +97,70 @@ jobs:
             echo "voters.db already present ($(du -h app/assets/voters.db | cut -f1))"
           fi
 
-      # ── 6. Flutter dependencies ──────────────────────────────────────────
+      # ── 6. Create Flutter project scaffold (provides android/ Gradle files) ─
+      - name: Create Flutter app scaffold
+        run: |
+          # Create a fresh Flutter project — this generates the android/ folder
+          flutter create \
+            --org com.javafaiz.talamudipi \
+            --project-name my_talamudipi \
+            --platforms android \
+            /tmp/flutter_app
+
+          # Overwrite generated lib/ and pubspec.yaml with our actual source
+          rm -rf /tmp/flutter_app/lib
+          cp -r app/lib /tmp/flutter_app/lib
+          cp app/pubspec.yaml /tmp/flutter_app/pubspec.yaml
+
+          echo "Scaffold created at /tmp/flutter_app"
+          ls /tmp/flutter_app/
+
+      # ── 7. Copy assets into scaffold ─────────────────────────────────────
+      - name: Copy assets into scaffold
+        run: |
+          mkdir -p /tmp/flutter_app/assets/fonts
+
+          # Copy voters.db
+          test -f app/assets/voters.db && \
+            cp app/assets/voters.db /tmp/flutter_app/assets/voters.db || \
+            echo "voters.db not in repo — placeholder was created in step 5"
+          cp -f app/assets/voters.db /tmp/flutter_app/assets/voters.db 2>/dev/null || true
+
+          # Copy fonts
+          cp app/assets/fonts/NotoSansTelugu-Regular.ttf /tmp/flutter_app/assets/fonts/
+          cp app/assets/fonts/NotoSansTelugu-Bold.ttf    /tmp/flutter_app/assets/fonts/
+
+          echo "=== Assets ==="
+          ls -lh /tmp/flutter_app/assets/
+          ls -lh /tmp/flutter_app/assets/fonts/
+          test -f /tmp/flutter_app/assets/voters.db   && echo "✓ voters.db"   || { echo "✗ voters.db MISSING"; exit 1; }
+          test -f /tmp/flutter_app/assets/fonts/NotoSansTelugu-Regular.ttf && echo "✓ Regular font" || { echo "✗ Regular font MISSING"; exit 1; }
+          test -f /tmp/flutter_app/assets/fonts/NotoSansTelugu-Bold.ttf    && echo "✓ Bold font"    || { echo "✗ Bold font MISSING"; exit 1; }
+
+      # ── 8. Flutter dependencies ──────────────────────────────────────────
       - name: Install Flutter dependencies
-        working-directory: app
+        working-directory: /tmp/flutter_app
         run: flutter pub get
 
-      # ── 7. Verify assets are in place ────────────────────────────────────
-      - name: Verify asset files exist
-        run: |
-          echo "=== Assets ==="
-          ls -lh app/assets/ 2>/dev/null || echo "(no assets dir)"
-          ls -lh app/assets/fonts/ 2>/dev/null || echo "(no fonts dir)"
-          test -f app/assets/voters.db   && echo "✓ voters.db"      || { echo "✗ voters.db MISSING"; exit 1; }
-          test -f app/assets/fonts/NotoSansTelugu-Regular.ttf && echo "✓ Regular font" || { echo "✗ Regular font MISSING"; exit 1; }
-          test -f app/assets/fonts/NotoSansTelugu-Bold.ttf    && echo "✓ Bold font"    || { echo "✗ Bold font MISSING";    exit 1; }
-
-      # ── 8. Build release APK ─────────────────────────────────────────────
+      # ── 9. Build release APK ─────────────────────────────────────────────
       - name: Build release APK
-        working-directory: app
+        working-directory: /tmp/flutter_app
         run: |
           flutter build apk --release \
-            --dart-define=FLUTTER_WEB_CANVASKIT_URL=/ \
             2>&1 | tee /tmp/flutter_build.log
           echo ""
           echo "=== APK output ==="
           find build/app/outputs -name "*.apk" -exec ls -lh {} \;
 
-      # ── 9. Upload APK artifact ───────────────────────────────────────────
+      # ── 10. Upload APK artifact ──────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: my-talamudipi-release-apk
-          path: app/build/app/outputs/flutter-apk/app-release.apk
+          path: /tmp/flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
-      # ── 10. Upload build log on failure ─────────────────────────────────
+      # ── 11. Upload build log on failure ─────────────────────────────────
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
