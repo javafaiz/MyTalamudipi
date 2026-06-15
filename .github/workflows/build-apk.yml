@@ -112,6 +112,10 @@ jobs:
           cp -r app/lib /tmp/flutter_app/lib
           cp app/pubspec.yaml /tmp/flutter_app/pubspec.yaml
 
+          # Set the launcher label shown on the phone
+          sed -i 's/android:label="my_talamudipi"/android:label="My Talamudipi"/' \
+            /tmp/flutter_app/android/app/src/main/AndroidManifest.xml
+
           echo "Scaffold created at /tmp/flutter_app"
           ls /tmp/flutter_app/
 
