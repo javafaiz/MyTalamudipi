@@ -45,6 +45,29 @@ VOTER_ID_RE  = re.compile(r'^[A-Z]{2,3}\d{6,14}$')
 # House number: digit(s) then hyphen then digits/letters  e.g. 1-1, 12-3A
 HOUSE_NO_RE  = re.compile(r'^\d+[-/]\d*[A-Za-z]?\d*$')
 
+# Gender normalization — PyMuPDF maps Telugu glyphs to these garbled chars
+# Determined by inspecting actual DB values (hex codepoints)
+_GENDER_MALE_CHAR   = '\u0057\u00ad'   # W + soft-hyphen  → Male
+_GENDER_FEMALE_CHAR = '\u013d\u0068\u0160\u016c'  # ŁhŠŬ → Female
+
+def _normalise_gender(raw: str) -> str:
+    raw = raw.strip()
+    if raw == _GENDER_MALE_CHAR or raw.startswith('W'):
+        return 'Male'
+    if raw == _GENDER_FEMALE_CHAR or '\u013d' in raw or '\u0160' in raw:
+        return 'Female'
+    return raw  # fallback: keep as-is
+
+# Rel_type normalization — same font encoding issue
+_REL_MAP = {
+    'R3': 'Father',
+    'R':  'Father',
+    'Z':  'Husband',
+}
+
+def _normalise_rel_type(raw: str) -> str:
+    return _REL_MAP.get(raw.strip(), raw.strip())
+
 
 # -- Part name from filename --------------------------------------------------
 
@@ -175,9 +198,9 @@ def extract_from_pdf(pdf_path: str, part_name: str = '',
                 'serial_no':         w[0],
                 'house_number':      w[1],
                 'voter_name':        w[2],
-                'relationship_type': w[3],
+                'relationship_type': _normalise_rel_type(w[3]),
                 'relationship_name': w[4],
-                'gender':            w[5],
+                'gender':            _normalise_gender(w[5]),
                 'age':               int(w[6]),
                 'voter_id':          w[7].upper(),
                 'part_name':         part_name,

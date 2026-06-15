@@ -42,27 +42,39 @@ class DbHelper {
 
   // ── Search methods ──────────────────────────────────────────────────────────
 
-  /// Returns the single voter with the exact [voterId] (EPIC number).
+  /// Returns the voter(s) matching the given [voterId] (EPIC number).
+  /// Supports partial match so e.g. "405225" finds "AP271850405225".
   Future<List<Voter>> searchByVoterId(String voterId) async {
     final db = await database;
-    final rows = await db.query(
+    final query = voterId.trim().toUpperCase();
+    // Try exact match first
+    var rows = await db.query(
       'voters',
       where: 'UPPER(voter_id) = ?',
-      whereArgs: [voterId.trim().toUpperCase()],
+      whereArgs: [query],
     );
+    // If no exact match, try partial (LIKE)
+    if (rows.isEmpty) {
+      rows = await db.query(
+        'voters',
+        where: 'UPPER(voter_id) LIKE ?',
+        whereArgs: ['%$query%'],
+        limit: 50,
+      );
+    }
     return rows.map(Voter.fromMap).toList();
   }
 
-  /// Returns all voters whose name contains [name] (Telugu or English).
-  Future<List<Voter>> searchByName(String name) async {
+  /// Returns voter(s) by serial number (exact or partial).
+  Future<List<Voter>> searchBySerialNo(String serialNo) async {
     final db = await database;
-    final pattern = '%${name.trim()}%';
+    final query = serialNo.trim();
     final rows = await db.query(
       'voters',
-      where: 'voter_name LIKE ?',
-      whereArgs: [pattern],
-      orderBy: 'voter_name',
-      limit: 200,
+      where: 'serial_no = ?',
+      whereArgs: [query],
+      orderBy: 'CAST(serial_no AS INTEGER)',
+      limit: 50,
     );
     return rows.map(Voter.fromMap).toList();
   }

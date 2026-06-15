@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../database/db_helper.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'మీ తలముడిపి',
+            'మన తలముడిపి',
             style: TextStyle(
               fontSize: 22,
               color: Colors.white.withOpacity(0.85),
@@ -64,17 +65,30 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Voter Information Search • ఓటరు సమాచారం',
-              style: TextStyle(fontSize: 11, color: Colors.white70),
-              textAlign: TextAlign.center,
-            ),
+          FutureBuilder<int>(
+            future: DbHelper.instance.totalVoters(),
+            builder: (context, snap) {
+              final count = snap.data ?? 0;
+              final label = count > 0
+                  ? 'Total Voters: $count  •  మొత్తం ఓటర్లు: $count'
+                  : 'Voter Information Search • ఓటరు సమాచారం';
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
+                    fontFamily: 'NotoSansTelugu',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -98,13 +112,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 18),
           _SearchCard(
-            icon: Icons.person_search_rounded,
-            titleTe: 'పేరు ద్వారా వెతకండి',
-            titleEn: 'Search by Name',
-            subtitleTe: 'ఒకే పేరున్న అందరి వివరాలు',
-            subtitleEn: 'All voters with matching name',
+            icon: Icons.format_list_numbered_rounded,
+            titleTe: 'సీరియల్ నంబరు ద్వారా వెతకండి',
+            titleEn: 'Search by Serial No.',
+            subtitleTe: 'జాబితాలో సంఖ్య ద్వారా వెతకండి',
+            subtitleEn: 'Find voter by serial number in the list',
             color: const Color(0xFF1565C0),
-            onTap: () => _navigate(context, SearchType.byName),
+            onTap: () => _navigate(context, SearchType.bySerialNo),
           ),
           const SizedBox(height: 14),
           _SearchCard(
